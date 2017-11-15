@@ -1,8 +1,8 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{24A0AA3C-B25F-4197-B23D-476D6462DBA0}</ProjectGuid>
@@ -52,13 +52,13 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\References\Newtonsoft.Json.dll</HintPath>
     </Reference>
-    <Reference Include="NLua">
+    <Reference Condition=" '$(OS)' == 'Windows_NT' " Include="NLua">
       <HintPath>..\output\dll\nlua\NLua.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Data.SQLite, Version=1.0.105.2, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=AMD64">
+    <Reference Condition=" '$(OS)' == 'Windows_NT' " Include="System.Data.SQLite, Version=1.0.105.2, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=AMD64">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\References\x64\SQLite\System.Data.SQLite.dll</HintPath>
     </Reference>
@@ -145,32 +145,32 @@
     <Compile Include="IPS.cs" />
     <Compile Include="IZipWriter.cs" />
     <Compile Include="KeyTurbo.cs" />
-    <Compile Include="lua\EmuLuaLibrary.Bit.cs" />
-    <Compile Include="lua\EmuLuaLibrary.Emu.cs" />
-    <Compile Include="lua\EmuLuaLibrary.Events.cs" />
-    <Compile Include="lua\EmuLuaLibrary.GameInfo.cs" />
-    <Compile Include="lua\EmuLuaLibrary.Genesis.cs" />
-    <Compile Include="lua\EmuLuaLibrary.Joypad.cs" />
-    <Compile Include="lua\EmuLuaLibrary.MainMemory.cs" />
-    <Compile Include="lua\EmuLuaLibrary.Memory.cs" />
-    <Compile Include="lua\EmuLuaLibrary.MemorySavestate.cs" />
-    <Compile Include="lua\EmuLuaLibrary.Movie.cs" />
-    <Compile Include="lua\EmuLuaLibrary.NES.cs" />
-    <Compile Include="lua\EmuLuaLibrary.SNES.cs" />
-    <Compile Include="lua\EmuLuaLibrary.SQL.cs" />
-    <Compile Include="lua\EmuLuaLibrary.String.cs" />
-    <Compile Include="lua\EmuLuaLibrary.UserData.cs" />
-    <Compile Include="lua\EnvironmentSandbox.cs" />
-    <Compile Include="lua\LuaAttributes.cs" />
-    <Compile Include="lua\LuaDocumentation.cs" />
-    <Compile Include="lua\LuaFile.cs" />
-    <Compile Include="lua\LuaFileList.cs" />
-    <Compile Include="lua\LuaFunctionList.cs" />
-    <Compile Include="lua\LuaHelper.cs" />
-    <Compile Include="lua\LuaLibraryBase.cs" />
-    <Compile Include="lua\LuaMemoryBase.cs" />
-    <Compile Include="lua\LuaSandbox.cs" />
-    <Compile Include="lua\NamedLuaFunction.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\EmuLuaLibrary.Bit.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\EmuLuaLibrary.Emu.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\EmuLuaLibrary.Events.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\EmuLuaLibrary.GameInfo.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\EmuLuaLibrary.Genesis.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\EmuLuaLibrary.Joypad.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\EmuLuaLibrary.MainMemory.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\EmuLuaLibrary.Memory.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\EmuLuaLibrary.MemorySavestate.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\EmuLuaLibrary.Movie.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\EmuLuaLibrary.NES.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\EmuLuaLibrary.SNES.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\EmuLuaLibrary.SQL.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\EmuLuaLibrary.String.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\EmuLuaLibrary.UserData.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\EnvironmentSandbox.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\LuaAttributes.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\LuaDocumentation.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\LuaFile.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\LuaFileList.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\LuaFunctionList.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\LuaHelper.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\LuaLibraryBase.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\LuaMemoryBase.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\LuaSandbox.cs" />
+    <Compile Condition=" '$(OS)' == 'Windows_NT' " Include="lua\NamedLuaFunction.cs" />
     <Compile Include="miniz\LibMiniz.cs" />
     <Compile Include="miniz\MinizZipWriter.cs" />
     <Compile Include="movie\bk2\Bk2ControllerAdapter.cs" />

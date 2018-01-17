@@ -128,12 +128,13 @@ namespace BizHawk.Client.EtoHawk
             {
                 // we're video dumping, so async mode only and use the DumpProxy.
                 // note that the avi dumper has already rewired the emulator itself in this case.
-                GlobalWin.Sound.SetAsyncInputPin(_dumpProxy);
+                GlobalWin.Sound.SetInputPin(_dumpProxy);
             }
             else*/
             {
-                //Global.Emulator.EndAsyncSound();
-                //GlobalWin.Sound.SetSyncInputPin(Global.Emulator.SyncSoundProvider);
+                bool useAsyncMode = _currentSoundProvider.CanProvideAsync && !Global.Config.SoundThrottle;
+                _currentSoundProvider.SetSyncMode(useAsyncMode ? SyncSoundMode.Async : SyncSoundMode.Sync);
+                GlobalWin.Sound.SetInputPin(_currentSoundProvider);
             }
         }
         public void ProgramRunLoop()
@@ -214,6 +215,24 @@ namespace BizHawk.Client.EtoHawk
 
             _throttle.Step(true, -1);
         }
+
+        private IEmulator Emulator
+        {
+            get
+            {
+                return Global.Emulator;
+            }
+
+            set
+            {
+                Global.Emulator = value;
+                _currentVideoProvider = Global.Emulator.AsVideoProviderOrDefault();
+                _currentSoundProvider = Global.Emulator.AsSoundProviderOrDefault();
+            }
+        }
+
+        private IVideoProvider _currentVideoProvider = NullVideo.Instance;
+        private ISoundProvider _currentSoundProvider = new NullSound(44100 / 60); // Reasonable default until we have a core instance
 
         public void ProcessInput()
         {
@@ -748,7 +767,7 @@ namespace BizHawk.Client.EtoHawk
                 bool result = loader.LoadRom(ofd.FileName, nextComm);
                 if (result)
                 {
-                    Global.Emulator = loader.LoadedEmulator;
+                    Emulator = loader.LoadedEmulator;
                     Global.Game = loader.Game;
                     CoreFileProvider.SyncCoreCommInputSignals(nextComm);
                     InputManager.SyncControls();

@@ -43,13 +43,14 @@ namespace EtoHawk.Config
             //this.btnSpecial.TabIndex = 2;
             //this.btnSpecial.UseVisualStyleBackColor = true;
             this.btnSpecial.Click += this.btnSpecial_Click;
+            this.btnSpecial.Visible = false; //TODO: Eto is not putting this in the right place on macOS right now, so I'm hiding it.
             // 
             // tableLayoutPanel1
             // 
             //this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             //this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
             this.tableLayoutPanel1.Add(this.widget, 0, 0);
-            this.tableLayoutPanel1.Add(this.btnSpecial, 1, 0);
+            this.tableLayoutPanel1.Add(this.btnSpecial, 0, 1);
             //this.tableLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
             //this.tableLayoutPanel1.Name = "tableLayoutPanel1";
             //this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle());

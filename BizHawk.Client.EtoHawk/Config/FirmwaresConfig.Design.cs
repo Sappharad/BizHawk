@@ -11,7 +11,7 @@ namespace BizHawk.Client.EtoHawk
 			gvFirmwares.Size = new Eto.Drawing.Size (600, 400);
 			gvFirmwares.GridLines = GridLines.Both;
 			GridColumnCollection gridCols = gvFirmwares.Columns;
-			gridCols.Add (new GridColumn(){ HeaderText = " " }); //TBD - Status column
+			//gridCols.Add (new GridColumn(){ HeaderText = " " }); //TBD - Status column - Empty columns crash it
 			gridCols.Add (new GridColumn(){ HeaderText = "System", DataCell = new TextBoxCell() { Binding=Binding.Property<FirmwareRow,string>(r=>r.SystemId) } });
 			gridCols.Add (new GridColumn(){ HeaderText = "ID", DataCell = new TextBoxCell() { Binding=Binding.Property<FirmwareRow,string>(r=>r.FirmwareId) } });
 			gridCols.Add (new GridColumn(){ HeaderText = "Description", DataCell = new TextBoxCell() { Binding=Binding.Property<FirmwareRow,string>(r=>r.Description) } });

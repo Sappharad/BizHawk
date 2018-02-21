@@ -13,10 +13,10 @@ namespace BizHawk.Client.EtoHawk
 		public string SystemId { get { return Record.SystemId; } }
 		public string FirmwareId { get { return Record.FirmwareId; } }
 		public string Description { get { return Record.Descr; } }
-        public string ResolvedWith { get { return string.Empty; } set{} }
-        public string Location { get { return string.Empty; } set { } }
-        public long Size { get { return 0; } set{ } }
-        public string Hash { get { return string.Empty; } set { } }
+        public string ResolvedWith { get; set; } = string.Empty;
+        public string Location { get; set; } = string.Empty;
+        public long Size { get; set; } = 0;
+        public string Hash { get; set; } = string.Empty;
 	}
 
 	public partial class FirmwaresConfig  : Dialog<bool>

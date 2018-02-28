@@ -82,6 +82,7 @@ namespace BizHawk.Client.EtoHawk
 					FirmwareRow fr = (FirmwareRow)gvFirmwares.SelectedItem;
 					Global.Config.FirmwareUserSpecifications[fr.Record.ConfigKey] = ofd.FileName;
 					DoScan();
+                    gvFirmwares.ReloadData(gvFirmwares.SelectedRow);
 				}
 			}
 		}
@@ -92,7 +93,8 @@ namespace BizHawk.Client.EtoHawk
 			{
 				FirmwareRow fr = (FirmwareRow)gvFirmwares.SelectedItem;
 				Global.Config.FirmwareUserSpecifications.Remove(fr.Record.ConfigKey);
-				DoScan();
+                DoScan();
+                gvFirmwares.ReloadData(gvFirmwares.SelectedRow);
 			}
 		}
 

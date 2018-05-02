@@ -77,6 +77,10 @@ namespace BizHawk.Bizware.BizwareGL
 			Owner.BindPipeline(Pipeline);
 		}
 
+        public unsafe void Run(Texture2d tex, int inputWidth, int inputHeight, int outputWidth, int outputHeight, bool flip){
+            Run(tex, new Size(inputWidth, inputHeight), new Size(inputWidth, inputHeight), flip);
+        }
+
 		public unsafe void Run(Texture2d tex, Size InputSize, Size OutputSize, bool flip)
 		{
 			flip = false;

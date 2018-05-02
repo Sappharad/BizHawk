@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Eto.Forms;
 using Eto;
+using Eto.Gl;
+using Eto.Forms;
 using Eto.Drawing;
+using OpenTK.Graphics.OpenGL;
 using BizHawk.Client.Common;
 using BizHawk.Emulation.Common;
 using System.Threading;
@@ -16,6 +18,7 @@ using System.Diagnostics;
 using BizHawk.Emulation.Cores.Nintendo.NES;
 using BizHawk.Emulation.Cores.Consoles.Nintendo.QuickNES;
 using BizHawk.Emulation.Common.IEmulatorExtensions;
+using BizHawk.Client.EtoHawk.Graphics;
 
 namespace BizHawk.Client.EtoHawk
 {
@@ -36,6 +39,7 @@ namespace BizHawk.Client.EtoHawk
         private bool _inResizeLoop;
         private bool _suspended; //True if a modal dialog appears
         private readonly InputCoalescer HotkeyCoalescer = new InputCoalescer();
+        public PresentationPanel PresentationPanel { get; private set; }
 
         public MainForm()
         {
@@ -51,6 +55,25 @@ namespace BizHawk.Client.EtoHawk
         private void InitBizHawk()
         {
             GlobalWin.MainForm = this;
+            Bizware.BizwareGL.Drivers.OpenTK.IGL_TK.CreateGraphicsImplementation = (Bizware.BizwareGL.Drivers.OpenTK.IGL_TK owner) => 
+            {
+                EtoGLWrapper egx = new EtoGLWrapper(owner);
+                return egx;
+            };
+            GlobalWin.IGL_GL = new Bizware.BizwareGL.Drivers.OpenTK.IGL_TK(2, 0, false);
+
+            // setup the GL context manager, needed for coping with multiple opengl cores vs opengl display method
+            GLManager.CreateInstance(GlobalWin.IGL_GL);
+            GlobalWin.GLManager = GLManager.Instance;
+            GlobalWin.GL = GlobalWin.IGL_GL;
+            try
+            {
+                using (GlobalWin.GL.CreateRenderer()) { }
+            }
+            catch (Exception)
+            {
+                //This failing would be bad
+            }
             Global.Rewinder = new Rewinder
             {
                 //MessageCallback = GlobalWin.OSD.AddMessage
@@ -101,7 +124,9 @@ namespace BizHawk.Client.EtoHawk
             InputManager.RewireInputChain();
             /*GlobalWin.Tools = new ToolManager(this);*/
             RewireSound();
-            GlobalWin.DisplayManager = new DisplayManager();
+            PresentationPanel = new PresentationPanel();
+            PresentationPanel.GraphicsControl.MainWindow = true;
+            GlobalWin.DisplayManager = new DisplayManager(PresentationPanel);
         }
 
         private static void InitControls()
@@ -178,13 +203,13 @@ namespace BizHawk.Client.EtoHawk
 
                 if (Global.Config.DisplayInput) // Input display wants to update even while paused
                 {
-                    GlobalWin.DisplayManager.NeedsToPaint = true;
+                    //GlobalWin.DisplayManager.NeedsToPaint = true;
                 }
 
                 StepRunLoop_Core();
                 StepRunLoop_Throttle();
 
-                if (GlobalWin.DisplayManager.NeedsToPaint)
+                //if (GlobalWin.DisplayManager.NeedsToPaint)
                 {
                     Render();
                 }
@@ -202,8 +227,8 @@ namespace BizHawk.Client.EtoHawk
             {
                 //Invalidate doesn't force the update, which may skip frames, but Update blocks and slows things down.
                 //So invalidate wins for the moment, until we switch to OpenGL.
-                Application.Instance.Invoke(new Action(() => _viewport.Invalidate()));
-                GlobalWin.DisplayManager.NeedsToPaint = false;
+                //Application.Instance.Invoke(new Action(() => _viewport.SwapBuffers()));
+                //GlobalWin.DisplayManager.NeedsToPaint = false;
             }
         }
 
@@ -519,7 +544,7 @@ namespace BizHawk.Client.EtoHawk
 
                 Global.MovieSession.HandleMovieAfterFrameLoop();
 
-                GlobalWin.DisplayManager.NeedsToPaint = true;
+                //GlobalWin.DisplayManager.NeedsToPaint = true;
                 //Global.CheatList.Pulse();
 
                 /*if (!PauseAVI)
@@ -723,12 +748,12 @@ namespace BizHawk.Client.EtoHawk
             Application.Instance.Quit();
         }
 
-        private void viewport_Paint(object sender, PaintEventArgs e)
+        private void viewport_Draw(object sender, EventArgs e)
         {
             if (Global.Emulator != null) 
             {
                 var video = Global.Emulator.AsVideoProviderOrDefault();
-                Bitmap img = new Bitmap(video.BufferWidth, video.BufferHeight, PixelFormat.Format32bppRgb);
+                Bitmap img = new Bitmap(video.BufferWidth, video.BufferHeight, Eto.Drawing.PixelFormat.Format32bppRgb);
                 BitmapData data = img.Lock();
                 int[] buffer = (int[])(video.GetVideoBuffer().Clone());
                 //Buffer is cloned to prevent tearing. The emulation thread is running independent of drawing, 
@@ -745,12 +770,14 @@ namespace BizHawk.Client.EtoHawk
                     }
                 }
                 Marshal.Copy(buffer, 0, data.Data, buffer.Length);
+                GL.DrawPixels(video.BufferWidth, video.BufferHeight, OpenTK.Graphics.OpenGL.PixelFormat.Rgb, PixelType.UnsignedInt8888, data.Data);
                 data.Dispose();
-                e.Graphics.DrawImage(img, 0, 0, _viewport.Width, _viewport.Height);
             }
             else
             {
-                e.Graphics.FillRectangle(Brushes.Black, new RectangleF(0, 0, _viewport.Width, _viewport.Height));
+                //PresentationPanel.GraphicsControl.MakeCurrent();
+                GL.ClearColor(0f, 0f, 0f, 1.0f);
+                GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             }
         }
 
@@ -882,10 +909,13 @@ namespace BizHawk.Client.EtoHawk
 
         CoreComm CreateCoreComm()
         {
-            CoreComm ret = new CoreComm(ShowMessageCoreComm, NotifyCoreComm);
-            //ret.RequestGLContext = () => GlobalWin.GLManager.CreateGLContext();
-            //ret.ActivateGLContext = (gl) => GlobalWin.GLManager.Activate((GLManager.ContextRef)gl);
-            //ret.DeactivateGLContext = () => GlobalWin.GLManager.Deactivate();
+            CoreComm ret = new CoreComm(ShowMessageCoreComm, NotifyCoreComm)
+            {
+                ReleaseGLContext = o => GlobalWin.GLManager.ReleaseGLContext(o),
+                RequestGLContext = (major, minor, forward) => GlobalWin.GLManager.CreateGLContext(major, minor, forward),
+                ActivateGLContext = gl => GlobalWin.GLManager.Activate((GLManager.ContextRef)gl),
+                DeactivateGLContext = () => GlobalWin.GLManager.Deactivate()
+            };
             return ret;
         }
 

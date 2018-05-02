@@ -150,6 +150,9 @@ namespace BizHawk.Bizware.BizwareGL.Drivers.SlimDX
 		{
 			_clearColor = color.ToArgb();
 		}
+        public void SetClearColor(int color){
+            _clearColor = color;
+        }
 
 		public IBlendState CreateBlendState(gl.BlendingFactorSrc colorSource, gl.BlendEquationMode colorEquation, gl.BlendingFactorDest colorDest,
 					gl.BlendingFactorSrc alphaSource, gl.BlendEquationMode alphaEquation, gl.BlendingFactorDest alphaDest)

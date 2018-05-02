@@ -54,6 +54,10 @@ namespace BizHawk.Bizware.BizwareGL.Drivers.GdiPlus
 		{
 			_currentClearColor = color;
 		}
+        public void SetClearColor(int color)
+        {
+            _currentClearColor = Color.FromArgb(color);
+        }
 		
 		public unsafe void BindArrayData(void* pData)
 		{

@@ -109,15 +109,28 @@ namespace BizHawk.Bizware.BizwareGL.Drivers.OpenTK
 		{
 			GL.ClearColor(color);
 		}
+        public void SetClearColor(int color)
+        {
+            GL.ClearColor(((color >> 24) & 0xFF) / 255.0f, ((color >> 16) & 0xFF) / 255.0f, ((color >> 8) & 0xFF) / 255.0f, (color & 0xFF) / 255.0f);
+        }
+
+        public delegate IGraphicsControl CreateGraphicsControl(IGL_TK owner);
+        public static CreateGraphicsControl CreateGraphicsImplementation;
 
 		public IGraphicsControl Internal_CreateGraphicsControl()
 		{
-			var glc = new GLControlWrapper(this);
-			glc.CreateControl();
+            IGraphicsControl glc;
+            if(CreateGraphicsImplementation != null){
+                glc = CreateGraphicsImplementation(this);
+            }
+            else
+            {
+                glc = new GLControlWrapper(this);
+                ((GLControlWrapper)glc).CreateControl();
+            }
 
 			//now the control's context will be current. annoying! fix it.
 			MakeDefaultCurrent();
-
 
 			return glc;
 		}

@@ -1,6 +1,7 @@
 ﻿using System;
 using Eto;
 using Eto.Forms;
+using Eto.Gl;
 
 namespace BizHawk.Client.EtoHawk.WinForms
 {
@@ -9,7 +10,12 @@ namespace BizHawk.Client.EtoHawk.WinForms
         [STAThread]
         public static void Main(string[] args)
         {
-            new Application(Platforms.WinForms).Run(new MainForm());
+            var platform = new Eto.WinForms.Platform();
+#if WINDOWS
+            platform.Add<GLSurface.IHandler>(() => new Eto.Gl.Windows.WinGLSurfaceHandler());
+#endif
+
+            new Application(platform).Run(new MainForm());
         }
     }
 }

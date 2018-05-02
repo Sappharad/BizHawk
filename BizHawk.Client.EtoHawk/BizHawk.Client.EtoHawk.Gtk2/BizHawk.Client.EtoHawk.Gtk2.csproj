@@ -56,6 +56,9 @@
     <Reference Include="Eto.Gtk">
       <HintPath>..\packages\Eto.Platform.Gtk.2.4.1\lib\netstandard2.0\Eto.Gtk.dll</HintPath>
     </Reference>
+    <Reference Include="Eto.Gl">
+      <HintPath>..\..\References\Eto.Gl.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BizHawk.Client.EtoHawk.csproj">

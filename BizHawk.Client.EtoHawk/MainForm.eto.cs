@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Eto.Forms;
 using Eto;
 using Eto.Drawing;
+using Eto.Gl;
 using BizHawk.Client.Common;
 using BizHawk.Emulation.Common;
 using System.Threading;
@@ -24,10 +25,8 @@ namespace BizHawk.Client.EtoHawk
         {
             ClientSize = new Size(640, 480);
             Title = "BizHawk";
-            
-            _viewport = new Drawable();
-            _viewport.Paint += viewport_Paint;
-            Content = _viewport;
+
+            Content = PresentationPanel.GraphicsControl;
             this.Closed += MainForm_Closed;
 
             _mnuConfigControllers = new ButtonMenuItem() { Text = "Controllers..." };
@@ -112,6 +111,5 @@ namespace BizHawk.Client.EtoHawk
 
         private ButtonMenuItem _mnuConfigControllers;
 		private ButtonMenuItem _mnuConfigFirmwares;
-        private Drawable _viewport;
     }
 }

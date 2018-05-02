@@ -27,7 +27,7 @@ namespace BizHawk.Bizware.BizwareGL
 		/// <summary>
 		/// Sets the current clear color
 		/// </summary>
-		void SetClearColor(Color color);
+		void SetClearColor(int color);
 
 		/// <summary>
 		/// compile a fragment shader. This is the simplified method. A more complex method may be added later which will accept multiple sources and preprocessor definitions independently

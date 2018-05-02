@@ -221,14 +221,51 @@ namespace BizHawk.Client.EtoHawk
 
         }
 
+        int skipMe = 5;
+
         private void Render()
         {
             if (_running)
             {
-                //Invalidate doesn't force the update, which may skip frames, but Update blocks and slows things down.
-                //So invalidate wins for the moment, until we switch to OpenGL.
-                //Application.Instance.Invoke(new Action(() => _viewport.SwapBuffers()));
-                //GlobalWin.DisplayManager.NeedsToPaint = false;
+                if (Global.Config.DispSpeedupFeatures == 0)
+                {
+                    return;
+                }
+
+                var video = _currentVideoProvider;
+                Size currVideoSize = new Size(video.BufferWidth, video.BufferHeight);
+                Size currVirtualSize = new Size(video.VirtualWidth, video.VirtualHeight);
+
+                bool resizeFramebuffer = false;
+                /*if (currVideoSize != _lastVideoSize || currVirtualSize != _lastVirtualSize)
+                    resizeFramebuffer = true;*/
+
+                bool isZero = false;
+                if (currVideoSize.Width == 0 || currVideoSize.Height == 0 || currVirtualSize.Width == 0 || currVirtualSize.Height == 0)
+                    isZero = true;
+
+                //don't resize if the new size is 0 somehow; we'll wait until we have a sensible size
+                if (isZero)
+                    resizeFramebuffer = false;
+
+                /*if (resizeFramebuffer)
+                {
+                    _lastVideoSize = currVideoSize;
+                    _lastVirtualSize = currVirtualSize;
+                    FrameBufferResized();
+                }*/
+
+                if(skipMe > 0){
+                    skipMe--; //Temporary hack. App will crash if we try to render before it's done loading.
+                    return;
+                }
+
+                //rendering flakes out egregiously if we have a zero size
+                //can we fix it later not to?
+                if (isZero)
+                    GlobalWin.DisplayManager.Blank();
+                else
+                    GlobalWin.DisplayManager.UpdateSource(video);
             }
         }
 
@@ -746,39 +783,6 @@ namespace BizHawk.Client.EtoHawk
             _running = false;
             _worker.Join(5000);
             Application.Instance.Quit();
-        }
-
-        private void viewport_Draw(object sender, EventArgs e)
-        {
-            if (Global.Emulator != null) 
-            {
-                var video = Global.Emulator.AsVideoProviderOrDefault();
-                Bitmap img = new Bitmap(video.BufferWidth, video.BufferHeight, Eto.Drawing.PixelFormat.Format32bppRgb);
-                BitmapData data = img.Lock();
-                int[] buffer = (int[])(video.GetVideoBuffer().Clone());
-                //Buffer is cloned to prevent tearing. The emulation thread is running independent of drawing, 
-                //does not block, can (and will) update the framebuffer while we draw it.
-                if (img.Platform.IsMac)
-                {
-                    //Colors are reversed on OSX, even though it's Little Endian just like on Windows.
-                    //I think this is a bug in Eto framework. This hack won't be needed when I bring back OpenGL, or if Eto gets fixed.
-                    for (int i = 0; i < buffer.Length; i++)
-                    {
-                        int x = buffer [i];
-                        x = (x >> 16 & 0xFF) + (x & 0xFF00) + ((x << 16) & 0xFF0000);
-                        buffer[i] = x;
-                    }
-                }
-                Marshal.Copy(buffer, 0, data.Data, buffer.Length);
-                GL.DrawPixels(video.BufferWidth, video.BufferHeight, OpenTK.Graphics.OpenGL.PixelFormat.Rgb, PixelType.UnsignedInt8888, data.Data);
-                data.Dispose();
-            }
-            else
-            {
-                //PresentationPanel.GraphicsControl.MakeCurrent();
-                GL.ClearColor(0f, 0f, 0f, 1.0f);
-                GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-            }
         }
 
         private void OpenRom()

@@ -111,7 +111,7 @@ namespace BizHawk.Bizware.BizwareGL.Drivers.OpenTK
 		}
         public void SetClearColor(int color)
         {
-            GL.ClearColor(((color >> 24) & 0xFF) / 255.0f, ((color >> 16) & 0xFF) / 255.0f, ((color >> 8) & 0xFF) / 255.0f, (color & 0xFF) / 255.0f);
+            GL.ClearColor(((color >> 16) & 0xFF) / 255.0f, ((color >> 8) & 0xFF) / 255.0f, ((color >> 0) & 0xFF) / 255.0f, ((color>>24) & 0xFF) / 255.0f);
         }
 
         public delegate IGraphicsControl CreateGraphicsControl(IGL_TK owner);

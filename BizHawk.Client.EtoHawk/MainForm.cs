@@ -46,13 +46,18 @@ namespace BizHawk.Client.EtoHawk
             InitBizHawk();
             _throttle = new Throttle();
             InitializeComponent();
-            
-            _running = true;
-            _worker = new Thread(ProgramRunLoop);
-            _worker.Start();
         }
 
-        private void InitBizHawk()
+		protected override void OnShown(EventArgs e)
+		{
+			base.OnShown(e);
+
+            _running = true;
+			_worker = new Thread(ProgramRunLoop);
+			_worker.Start();
+		}
+
+		private void InitBizHawk()
         {
             GlobalWin.MainForm = this;
             Bizware.BizwareGL.Drivers.OpenTK.IGL_TK.CreateGraphicsImplementation = (Bizware.BizwareGL.Drivers.OpenTK.IGL_TK owner) => 
@@ -218,10 +223,7 @@ namespace BizHawk.Client.EtoHawk
 
                 Thread.Sleep(0);
             }
-
         }
-
-        int skipMe = 5;
 
         private void Render()
         {
@@ -255,17 +257,15 @@ namespace BizHawk.Client.EtoHawk
                     FrameBufferResized();
                 }*/
 
-                if(skipMe > 0){
-                    skipMe--; //Temporary hack. App will crash if we try to render before it's done loading.
-                    return;
-                }
-
                 //rendering flakes out egregiously if we have a zero size
-                //can we fix it later not to?
-                if (isZero)
-                    GlobalWin.DisplayManager.Blank();
-                else
-                    GlobalWin.DisplayManager.UpdateSource(video);
+				//can we fix it later not to?
+				Application.Instance.Invoke(() =>
+				{
+					if (isZero)
+						GlobalWin.DisplayManager.Blank();
+					else
+						GlobalWin.DisplayManager.UpdateSource(video);
+				});
             }
         }
 

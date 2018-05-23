@@ -74,3 +74,4 @@ libsnes/vs2015/libsnes.VC.db
 waterbox/**/*.wbx
 waterbox/**/*.wbx.in
 BizHawk.Client.EtoHawk/.vs/**
+BizHawk.Client.EtoHawk/packages/**

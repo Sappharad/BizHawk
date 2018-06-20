@@ -80,7 +80,15 @@ namespace BizHawk.Client.EtoHawk
                             _mnuConfigControllers,
 							_mnuConfigFirmwares
                         }
-                    }
+                    },
+					new ButtonMenuItem{
+						Text="Debug",
+						Items = {
+							new Command((sender, e)=>DumpFramebuffer()){
+								MenuText = "Dump Framebuffer"
+							}
+						}
+					}
 				},
                 // quit item (goes in Application menu on OS X, File menu for others)
                 QuitItem = new Command((sender, e) => { Shutdown(); })
@@ -96,6 +104,26 @@ namespace BizHawk.Client.EtoHawk
             };
             EnableControls();
         }
+
+		private void DumpFramebuffer(){
+			_suspended = true;
+			var buffer = GlobalWin.DisplayManager.RenderOffscreen(_currentVideoProvider, false);
+
+			SaveFileDialog saveFileDialog = new SaveFileDialog();
+			if(saveFileDialog.ShowDialog(this) == DialogResult.Ok){
+				string path = saveFileDialog.FileName;
+				using(FileStream fs = new FileStream(path, FileMode.Create, FileAccess.Write)){
+					for (int i = 0; i < buffer.Pixels.Length; i++){
+						int pixel = buffer.Pixels[i];
+						fs.WriteByte((byte)(pixel & 0xFF));
+						fs.WriteByte((byte)((pixel >> 8) & 0xFF));
+						fs.WriteByte((byte)((pixel >> 16) & 0xFF));
+						fs.WriteByte((byte)((pixel >> 24) & 0xFF));
+					}
+				}
+			}
+			_suspended = false;
+		}
 
         private void EnableControls()
         {

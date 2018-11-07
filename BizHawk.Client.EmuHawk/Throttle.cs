@@ -141,6 +141,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			uint TimeBeginPeriod(uint ms);
 		}
+#if WINDOWS
 		private class WinSysTimer : PlatformSpecificSysTimer
 		{
 			[DllImport("winmm.dll", EntryPoint = "timeBeginPeriod")]
@@ -160,9 +161,14 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 		static PlatformSpecificSysTimer sysTimer = Global.RunningOnUnix ? (PlatformSpecificSysTimer) new UnixMonoSysTimer() : (PlatformSpecificSysTimer) new WinSysTimer();
+#endif
 		static uint TimeBeginPeriod(uint ms)
 		{
+#if WINDOWS
 			return sysTimer.TimeBeginPeriod(ms);
+#else
+			return 0;
+#endif
 		}
 
 		static readonly int tmethod;

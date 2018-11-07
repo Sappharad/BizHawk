@@ -51,7 +51,9 @@ namespace BizHawk.Client.EmuHawk
 
 		public static void ResetTimerImmediate()
 		{
+#if WINDOWS
 			SetScreenSaverTimeout(GetScreenSaverTimeout());
+#endif
 		}
 
 		private static int ctr;
@@ -60,7 +62,9 @@ namespace BizHawk.Client.EmuHawk
 			ctr++;
 			if (ctr == 120)
 			{
+#if WINDOWS
 				SetScreenSaverTimeout(GetScreenSaverTimeout());
+#endif
 				ctr = 0;
 			}
 		}

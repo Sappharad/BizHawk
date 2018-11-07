@@ -287,7 +287,7 @@ namespace BizHawk.Bizware.BizwareGL.Drivers.OpenTK
 			for (int i = 0; i < nAttributes; i++)
 			{
 				int size, length;
-				string name = new System.Text.StringBuilder(1024).ToString();
+				string name;
 				ActiveAttribType type;
 				GL.GetActiveAttrib(pid, i, 1024, out length, out size, out type, out name);
 				attributes.Add(new AttributeInfo() { Handle = new IntPtr(i), Name = name });
@@ -303,7 +303,7 @@ namespace BizHawk.Bizware.BizwareGL.Drivers.OpenTK
 			{
 				int size, length;
 				ActiveUniformType type;
-				string name = new System.Text.StringBuilder(1024).ToString().ToString();
+				string name;
 				GL.GetActiveUniform(pid, i, 1024, out length, out size, out type, out name);
 				errcode = GL.GetError();
 				int loc = GL.GetUniformLocation(pid, name);

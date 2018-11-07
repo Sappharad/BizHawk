@@ -65,6 +65,7 @@ namespace BizHawk.Client.EmuHawk
 			libLoader.FreePlatformSpecific(vc2010);
 			libLoader.FreePlatformSpecific(vc2010p);
 
+#if WINDOWS
 			if (!EXE_PROJECT.PlatformLinkedLibSingleton.RunningOnUnix)
 			{
 				// this will look in subdirectory "dll" to load pinvoked stuff
@@ -81,6 +82,7 @@ namespace BizHawk.Client.EmuHawk
 
 				//We need to do it here too... otherwise people get exceptions when externaltools we distribute try to startup
 			}
+#endif
 		}
 
 		[STAThread]
@@ -99,6 +101,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				try
 				{
+#if WINDOWS
 					if (Global.Config.SingleInstanceMode)
 					{
 						try
@@ -111,6 +114,7 @@ namespace BizHawk.Client.EmuHawk
 						}
 					}
 					else
+#endif
 					{
 						using (var mf = new MainForm(args))
 						{
@@ -235,7 +239,9 @@ namespace BizHawk.Client.EmuHawk
 			try
 			{
 				Global.Config = ConfigService.Load<Config>(PathManager.DefaultIniPath);
-			} catch (Exception e) {
+			}
+			catch (Exception e)
+			{
 				new ExceptionBox(e).ShowDialog();
 				new ExceptionBox("Since your config file is corrupted, we're going to recreate it. Back it up before proceeding if you want to investigate further.").ShowDialog();
 				File.Delete(PathManager.DefaultIniPath);
@@ -264,7 +270,7 @@ namespace BizHawk.Client.EmuHawk
 			GLManager.CreateInstance(GlobalWin.IGL_GL);
 			GlobalWin.GLManager = GLManager.Instance;
 
-			//now create the "GL" context for the display method. we can reuse the IGL_TK context if opengl display method is chosen
+		//now create the "GL" context for the display method. we can reuse the IGL_TK context if opengl display method is chosen
 			if (EXE_PROJECT.PlatformLinkedLibSingleton.RunningOnUnix) Global.Config.DispMethod = Config.EDispMethod.GdiPlus;
 		REDO_DISPMETHOD:
 			if (Global.Config.DispMethod == Config.EDispMethod.GdiPlus)
@@ -275,7 +281,7 @@ namespace BizHawk.Client.EmuHawk
 				{
 					GlobalWin.GL = new Bizware.BizwareGL.Drivers.SlimDX.IGL_SlimDX9();
 				}
-				catch(Exception ex)
+				catch (Exception ex)
 				{
 					var e2 = new Exception("Initialization of Direct3d 9 Display Method failed; falling back to GDI+", ex);
 					new ExceptionBox(e2).ShowDialog();
@@ -304,7 +310,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				using (GlobalWin.GL.CreateRenderer()) { }
 			}
-			catch(Exception ex)
+			catch (Exception ex)
 			{
 				var e2 = new Exception("Initialization of Display Method failed; falling back to GDI+", ex);
 				new ExceptionBox(e2).ShowDialog();
@@ -320,8 +326,10 @@ namespace BizHawk.Client.EmuHawk
 				//It isn't clear whether we need the earlier SetDllDirectory(), but I think we do.
 				//note: this is pasted instead of being put in a static method due to this initialization code being sensitive to things like that, and not wanting to cause it to break
 				//pasting should be safe (not affecting the jit order of things)
+#if WINDOWS
 				string dllDir = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "dll");
 				SetDllDirectory(dllDir);
+#endif
 			}
 
 			// Using a simple conditional to skip the single-instancing step caused crashes on GNU+Linux, even though the single-instancing step wasn't being executed. Something about the way instantiation works in C# means this workaround is possible.

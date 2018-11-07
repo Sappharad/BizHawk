@@ -41,7 +41,7 @@ namespace BizHawk.Bizware.BizwareGL
 		BitmapData CurrLock;
 		public BitmapData LockBits() //TODO - add read/write semantic, for wraps
 		{
-			if(CurrLock != null)
+			if (CurrLock != null)
 				throw new InvalidOperationException("BitmapBuffer can only be locked once!");
 
 			if (WrappedBitmap != null)
@@ -112,7 +112,7 @@ namespace BizHawk.Bizware.BizwareGL
 		{
 			var bmpdata = LockBits();
 			int[] newPixels = new int[Width * Height];
-			int todo = Width*Height;
+			int todo = Width * Height;
 			int* s = (int*)bmpdata.Scan0.ToPointer();
 			fixed (int* d = newPixels)
 			{
@@ -129,7 +129,7 @@ namespace BizHawk.Bizware.BizwareGL
 				}
 				else
 				{
-					for (int y = 0, i=0; y < Height; y++)
+					for (int y = 0, i = 0; y < Height; y++)
 					{
 						for (int x = 0; x < Width; x++, i++)
 						{
@@ -140,7 +140,7 @@ namespace BizHawk.Bizware.BizwareGL
 			}
 
 			UnlockBits(bmpdata);
-		
+
 			Pixels = newPixels;
 		}
 
@@ -238,7 +238,7 @@ namespace BizHawk.Bizware.BizwareGL
 			Width = widthRound;
 			Height = heightRound;
 		}
-		
+
 		/// <summary>
 		/// Creates a BitmapBuffer image from the specified filename
 		/// </summary>
@@ -345,7 +345,7 @@ namespace BizHawk.Bizware.BizwareGL
 								if (srcPixel != 0)
 								{
 									int color = palette[srcPixel].ToArgb();
-									
+
 									//make transparent pixels turn into black to avoid filtering issues and other annoying issues with stray junk in transparent pixels.
 									//(yes, we can have palette entries with transparency in them (PNGs support this, annoyingly))
 									if (cleanup)
@@ -366,11 +366,18 @@ namespace BizHawk.Bizware.BizwareGL
 					int width = bmp.Width;
 					int height = bmp.Height;
 					InitSize(width, height);
-					BitmapData bmpdata = bmp.LockBits(new sd.Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
-					int* ptr = (int*)bmpdata.Scan0;
-					int stride = bmpdata.Stride / 4;
-					LoadFrom(width, stride, height, (byte*)ptr, options);
-					bmp.UnlockBits(bmpdata);
+					try
+					{
+						BitmapData bmpdata = bmp.LockBits(new sd.Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+						int* ptr = (int*)bmpdata.Scan0;
+						int stride = bmpdata.Stride / 4;
+						LoadFrom(width, stride, height, (byte*)ptr, options);
+						bmp.UnlockBits(bmpdata);
+					}
+					catch
+					{
+						//Who cares
+					}
 					needsPad = false;
 				}
 			}
@@ -396,7 +403,7 @@ namespace BizHawk.Bizware.BizwareGL
 					{
 						int src = y * stride + x;
 						int srcVal = ((int*)data)[src];
-						
+
 						//make transparent pixels turn into black to avoid filtering issues and other annoying issues with stray junk in transparent pixels
 						if (cleanup)
 						{
@@ -540,9 +547,14 @@ namespace BizHawk.Bizware.BizwareGL
 			}
 
 			//note: we lock it as 32bpp even if the bitmap is 24bpp so we can write to it more conveniently. 
+#if WINDOWS
 			var bmpdata = bmp.LockBits(new sd.Rectangle(0, 0, Width, Height), ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
+#else
+			//Mac Cocoa System.Drawing doesn't support pixel format conversion yet.
+			var bmpdata = bmp.LockBits(new sd.Rectangle(0, 0, Width, Height), ImageLockMode.WriteOnly, bmp.PixelFormat);
+#endif
 
-			if(bmpdata.Stride == bmpdata.Width*4)
+			if (bmpdata.Stride == bmpdata.Width*4)
 				Marshal.Copy(Pixels, 0, bmpdata.Scan0, Width * Height);
 			else if (bmp.Width != 0 && bmp.Height != 0)
 			{

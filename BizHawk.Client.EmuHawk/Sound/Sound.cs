@@ -27,6 +27,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			if (Global.Config.SoundOutputMethod == Config.ESoundOutputMethod.OpenAL)
 				_outputDevice = new OpenALSoundOutput(this);
+#if WINDOWS
 			if (!PlatformLinkedLibSingleton.RunningOnUnix)
 			{
 				if (Global.Config.SoundOutputMethod == Config.ESoundOutputMethod.DirectSound)
@@ -34,6 +35,7 @@ namespace BizHawk.Client.EmuHawk
 				if (Global.Config.SoundOutputMethod == Config.ESoundOutputMethod.XAudio2)
 					_outputDevice = new XAudio2SoundOutput(this);
 			}
+#endif
 			if (_outputDevice == null)
 				_outputDevice = new DummySoundOutput(this);
 		}

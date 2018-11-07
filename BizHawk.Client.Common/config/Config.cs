@@ -181,10 +181,10 @@ namespace BizHawk.Client.Common
 		public enum EDispManagerAR
 		{
 			None,
-			System, 
+			System,
 
 			// actually, custom SIZE (fixme on major release)
-			Custom, 
+			Custom,
 			CustomRatio
 		}
 
@@ -280,7 +280,7 @@ namespace BizHawk.Client.Common
 				LastInputColor = -23296,
 				MovieInput = -8355712,
 
-				DispFPSanchor = 0,	// 0 = UL, 1 = UR, 2 = DL, 3 = DR
+				DispFPSanchor = 0,  // 0 = UL, 1 = UR, 2 = DL, 3 = DR
 				DispFrameanchor = 0,
 				DispLaganchor = 0,
 				DispInpanchor = 0,
@@ -324,7 +324,7 @@ namespace BizHawk.Client.Common
 		public int DispAutoholdx = DefaultMessageOptions.DispAutoholdx;
 		public int DispAutoholdy = DefaultMessageOptions.DispAutoholdy;
 
-		public int DispFPSanchor = DefaultMessageOptions.DispFPSanchor;	// 0 = UL, 1 = UR, 2 = DL, 3 = DR
+		public int DispFPSanchor = DefaultMessageOptions.DispFPSanchor; // 0 = UL, 1 = UR, 2 = DL, 3 = DR
 		public int DispFrameanchor = DefaultMessageOptions.DispFrameanchor;
 		public int DispLaganchor = DefaultMessageOptions.DispLaganchor;
 		public int DispInpanchor = DefaultMessageOptions.DispInpanchor;
@@ -338,7 +338,7 @@ namespace BizHawk.Client.Common
 		public int AlertMessageColor = DefaultMessageOptions.AlertMessageColor;
 		public int LastInputColor = DefaultMessageOptions.LastInputColor;
 		public int MovieInput = DefaultMessageOptions.MovieInput;
-		
+
 		public int DispPrescale = 1;
 
 		// warning: we dont even want to deal with changing this at runtime. but we want it changed here for config purposes. so dont check this variable. check in GlobalWin or something like that.
@@ -401,9 +401,15 @@ namespace BizHawk.Client.Common
 		public bool DisplayRamWatch = false;
 
 		// Hex Editor Colors
+#if WINDOWS
 		public Color HexBackgrndColor = Color.FromName("Control");
 		public Color HexForegrndColor = Color.FromName("ControlText");
 		public Color HexMenubarColor = Color.FromName("Control");
+#else
+		public Color HexBackgrndColor = Color.LightGray;
+		public Color HexForegrndColor = Color.Black;
+		public Color HexMenubarColor = Color.LightGray;
+#endif
 		public Color HexFreezeColor = Color.LightBlue;
 		public Color HexHighlightColor = Color.Pink;
 		public Color HexHighlightFreezeColor = Color.Violet;
@@ -419,7 +425,7 @@ namespace BizHawk.Client.Common
 		public int GifWriterDelay = -1;
 		public bool VideoWriterAudioSync = true;
 
-		#region emulation core settings
+#region emulation core settings
 
 		public Dictionary<string, object> CoreSettings = new Dictionary<string, object>();
 		public Dictionary<string, object> CoreSyncSettings = new Dictionary<string, object>();
@@ -486,7 +492,7 @@ namespace BizHawk.Client.Common
 			}
 		}
 
-		#endregion
+#endregion
 
 		public Dictionary<string, ToolDialogSettings> CommonToolSettings = new Dictionary<string, ToolDialogSettings>();
 		public Dictionary<string, Dictionary<string, object>> CustomToolSettings = new Dictionary<string, Dictionary<string, object>>();

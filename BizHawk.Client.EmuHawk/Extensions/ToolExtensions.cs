@@ -115,6 +115,7 @@ namespace BizHawk.Client.EmuHawk.ToolExtensions
 							tsmiCopyFile.Click += (o, ev) => { System.Windows.Forms.Clipboard.SetFileDropList(lame); };
 							tsdd.Items.Add(tsmiCopyFile);
 
+#if WINDOWS
 							var tsmiTest = new ToolStripMenuItem { Text = "&Shell Context Menu" };
 							tsmiTest.Click += (o, ev) =>
 							{
@@ -125,6 +126,7 @@ namespace BizHawk.Client.EmuHawk.ToolExtensions
 								scm.ShowContextMenu(tsddi.Owner, new System.Drawing.Point(0, 0));
 							};
 							tsdd.Items.Add(tsmiTest);
+#endif
 
 							tsdd.Items.Add(new ToolStripSeparator());
 						}

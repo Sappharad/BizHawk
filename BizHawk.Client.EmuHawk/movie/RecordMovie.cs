@@ -123,7 +123,7 @@ namespace BizHawk.Client.EmuHawk
 						}
 					}
 				}
-				else if (StartFromCombo.SelectedItem.ToString() == "SaveRam"  && Emulator.HasSaveRam())
+				else if (StartFromCombo.SelectedItem.ToString() == "SaveRam" && Emulator.HasSaveRam())
 				{
 					var core = Emulator.AsSaveRam();
 					movieToRecord.StartsFromSavestate = false;
@@ -155,9 +155,9 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		private void BrowseBtn_Click(object sender, EventArgs e)
-		{			
+		{
 			string movieFolderPath = PathManager.MakeAbsolutePath(Global.Config.PathEntries.MoviesPathFragment, null);
-			
+
 			// Create movie folder if it doesn't already exist
 			try
 			{
@@ -176,13 +176,15 @@ namespace BizHawk.Client.EmuHawk
 				}
 				else throw;
 			}
-			
+
 			var sfd = new SaveFileDialog
 			{
 				InitialDirectory = movieFolderPath,
 				DefaultExt = "." + Global.MovieSession.Movie.PreferredExtension,
 				FileName = RecordBox.Text,
+#if WINDOWS
 				OverwritePrompt = false,
+#endif
 				Filter = "Movie Files (*." + Global.MovieSession.Movie.PreferredExtension + ")|*." + Global.MovieSession.Movie.PreferredExtension + "|All Files|*.*"
 			};
 

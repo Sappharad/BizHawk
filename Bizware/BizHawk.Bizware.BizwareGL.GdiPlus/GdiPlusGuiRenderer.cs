@@ -48,12 +48,12 @@ namespace BizHawk.Bizware.BizwareGL.Drivers.GdiPlus
 
 		public void SetPipeline(Pipeline pipeline)
 		{
-		
+
 		}
 
 		public void SetDefaultPipeline()
 		{
-	
+
 		}
 
 		public void SetModulateColorWhite()
@@ -67,7 +67,11 @@ namespace BizHawk.Bizware.BizwareGL.Drivers.GdiPlus
 			//white is really no color at all
 			if (color.ToArgb() == sd.Color.White.ToArgb())
 			{
+#if WINDOWS
 				CurrentImageAttributes.ClearColorMatrix(ColorAdjustType.Bitmap);
+#else
+				CurrentImageAttributes.ClearColorMatrix();
+#endif
 				return;
 			}
 
@@ -76,7 +80,7 @@ namespace BizHawk.Bizware.BizwareGL.Drivers.GdiPlus
 			float b = color.B / 255.0f;
 			float a = color.A / 255.0f;
 
-			float[][] colorMatrixElements = { 
+			float[][] colorMatrixElements = {
 			 new float[] {r,  0,  0,  0,  0},
 			 new float[] {0,  g,  0,  0,  0},
 			 new float[] {0,  0,  b,  0,  0},
@@ -84,7 +88,7 @@ namespace BizHawk.Bizware.BizwareGL.Drivers.GdiPlus
 			 new float[] {0,  0,  0,  0,  1}};
 
 			ColorMatrix colorMatrix = new ColorMatrix(colorMatrixElements);
-			CurrentImageAttributes.SetColorMatrix(colorMatrix,ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
+			CurrentImageAttributes.SetColorMatrix(colorMatrix, ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
 		}
 
 		sd.Color CurrentModulateColor = sd.Color.White;
@@ -255,7 +259,12 @@ namespace BizHawk.Bizware.BizwareGL.Drivers.GdiPlus
 
 			var tw = tex.Opaque as IGL_GdiPlus.TextureWrapper;
 			g.PixelOffsetMode = sd.Drawing2D.PixelOffsetMode.Half;
+#if WINDOWS
 			g.DrawImage(tw.SDBitmap, destPoints, new sd.RectangleF(0, 0, tex.Width, tex.Height), sd.GraphicsUnit.Pixel, CurrentImageAttributes);
+#else
+			//Mac Cocoa System.Drawing doesn't implement attributes overload yet
+			g.DrawImage(tw.SDBitmap, destPoints, new sd.RectangleF(0, 0, tex.Width, tex.Height), sd.GraphicsUnit.Pixel);
+#endif
 			g.Transform = new sd.Drawing2D.Matrix(); //.Reset() doesnt work ? ?
 		}
 

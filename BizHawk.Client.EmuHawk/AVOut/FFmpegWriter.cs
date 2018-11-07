@@ -88,7 +88,7 @@ namespace BizHawk.Client.EmuHawk
 #if WINDOWS
 				_ffmpeg.StartInfo.FileName = Path.Combine(PathManager.GetDllDirectory(), "ffmpeg.exe");
 #else
-				ffmpeg.StartInfo.FileName = "ffmpeg"; // expecting native version to be in path
+				_ffmpeg.StartInfo.FileName = "ffmpeg"; // expecting native version to be in path
 #endif
 
 				string filename = _baseName + (_segment > 0 ? $"_{_segment}" : "") + _ext;

@@ -29,7 +29,9 @@ namespace BizHawk.Client.EmuHawk
 						continue; // Don't input XBOX 360 controllers into here; we'll process them via XInput (there are limitations in some trigger axes when xbox pads go over xinput)
 
 					var joystick = new Joystick(_dinput, device.InstanceGuid);
+#if WINDOWS
 					joystick.SetCooperativeLevel(GlobalWin.MainForm.Handle, CooperativeLevel.Background | CooperativeLevel.Nonexclusive);
+#endif
 					foreach (DeviceObjectInstance deviceObject in joystick.GetObjects())
 					{
 						if ((deviceObject.ObjectType & ObjectDeviceType.Axis) != 0)

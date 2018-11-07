@@ -159,7 +159,15 @@ namespace BizHawk.Client.EmuHawk
 			Database.LoadDatabase(Path.Combine(PathManager.GetExeDirectoryAbsolute(), "gamedb", "gamedb.txt"));
 
 			// TODO GL - a lot of disorganized wiring-up here
+#if WINDOWS
 			CGC.CGCBinPath = Path.Combine(PathManager.GetDllDirectory(), "cgc.exe");
+#else
+			CGC.CGCBinPath = Path.Combine(PathManager.GetDllDirectory(), "cgc");
+			if (OpenTK.Configuration.RunningOnMacOS && File.Exists(CGC.CGCBinPath + "_osx"))
+			{
+				CGC.CGCBinPath += "_osx";
+			}
+#endif
 			PresentationPanel = new PresentationPanel();
 			PresentationPanel.GraphicsControl.MainWindow = true;
 			GlobalWin.DisplayManager = new DisplayManager(PresentationPanel);
@@ -422,10 +430,21 @@ namespace BizHawk.Client.EmuHawk
 			};
 		}
 
+		protected override void OnShown(EventArgs e)
+		{
+			base.OnShown(e);
+			Thread thd = new Thread(() => {
+				Thread.Sleep(1000);
+				GlobalWin.ExitCode = ProgramRunLoop();
+			});
+			thd.Start();
+		}
+
 		private readonly bool _supressSyncSettingsWarning;
 
 		public int ProgramRunLoop()
 		{
+			this.Invoke(new Action(() => { 
 			CheckMessages(); // can someone leave a note about why this is needed?
 			LogConsole.PositionConsole();
 
@@ -444,6 +463,7 @@ namespace BizHawk.Client.EmuHawk
 			BringToFront();
 
 			InitializeFpsData();
+			}));
 
 			for (;;)
 			{
@@ -479,18 +499,27 @@ namespace BizHawk.Client.EmuHawk
 					GlobalWin.Tools.LuaConsole.ResumeScripts(false);
 				}
 
-				StepRunLoop_Core();
-				StepRunLoop_Throttle();
-
-				Render();
-
-				CheckMessages();
-
-				if (_exitRequestPending)
+				Invoke(new Action(() =>
 				{
-					_exitRequestPending = false;
-					Close();
+					StepRunLoop_Core();
+				}));
+				StepRunLoop_Throttle();
+				try
+				{
+					Invoke(new Action(() =>
+					{
+						Render();
+
+						CheckMessages();
+
+						if (_exitRequestPending)
+						{
+							_exitRequestPending = false;
+							Close();
+						}
+					}));
 				}
+				catch{}
 
 				if (_windowClosedAndSafeToExitProcess)
 				{
@@ -528,9 +557,9 @@ namespace BizHawk.Client.EmuHawk
 			base.Dispose(disposing);
 		}
 
-		#endregion
+#endregion
 
-		#region Pause
+#region Pause
 
 		private bool _emulatorPaused;
 		public bool EmulatorPaused
@@ -565,9 +594,9 @@ namespace BizHawk.Client.EmuHawk
 			public bool Paused { get; private set; }
 		}
 
-		#endregion
+#endregion
 
-		#region Properties
+#region Properties
 
 		public string CurrentlyOpenRom { get; private set; } // todo - delete me and use only args instead
 		public LoadRomArgs CurrentlyOpenRomArgs { get; private set; }
@@ -610,9 +639,9 @@ namespace BizHawk.Client.EmuHawk
 
 		public bool IsTurboing => Global.ClientControls["Turbo"] || IsTurboSeeking;
 
-		#endregion
+#endregion
 
-		#region Public Methods
+#region Public Methods
 
 		public void ClearHolds()
 		{
@@ -1348,9 +1377,9 @@ namespace BizHawk.Client.EmuHawk
 			return true;
 		}
 
-		#endregion
+#endregion
 
-		#region Private variables
+#region Private variables
 
 		private Size _lastVideoSize = new Size(-1, -1), _lastVirtualSize = new Size(-1, -1);
 		private readonly SaveSlotManager _stateSlots = new SaveSlotManager();
@@ -1417,9 +1446,9 @@ namespace BizHawk.Client.EmuHawk
 
 		//countdown for saveram autoflushing
 		public int AutoFlushSaveRamIn { get; set; }
-		#endregion
+#endregion
 
-		#region Private methods
+#region Private methods
 
 		private void SetStatusBar()
 		{
@@ -2813,9 +2842,9 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 
-		#endregion
+#endregion
 
-		#region Frame Loop
+#region Frame Loop
 
 		private void StepRunLoop_Throttle()
 		{
@@ -3122,9 +3151,9 @@ namespace BizHawk.Client.EmuHawk
 			_framesSinceLastFpsUpdate = 0;
 		}
 
-		#endregion
+#endregion
 
-		#region AVI Stuff
+#region AVI Stuff
 
 		/// <summary>
 		/// start AVI recording, unattended
@@ -3479,9 +3508,9 @@ namespace BizHawk.Client.EmuHawk
 			return null;
 		}
 
-		#endregion
+#endregion
 
-		#region Scheduled for refactor
+#region Scheduled for refactor
 
 		private void ShowMessageCoreComm(string message)
 		{
@@ -4004,9 +4033,9 @@ namespace BizHawk.Client.EmuHawk
 			Global.Rewinder.Clear();
 		}
 
-		#endregion
+#endregion
 
-		#region Tool Control API
+#region Tool Control API
 
 		// TODO: move me
 		public IControlMainform Master { get; private set; }
@@ -4514,6 +4543,6 @@ namespace BizHawk.Client.EmuHawk
 			return isRewinding;
 		}
 
-		#endregion
+#endregion
 	}
 }

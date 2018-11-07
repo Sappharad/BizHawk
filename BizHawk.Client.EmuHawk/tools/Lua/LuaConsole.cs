@@ -57,7 +57,7 @@ namespace BizHawk.Client.EmuHawk
 				if (AskSaveChanges())
 				{
 					SaveColumnInfo(LuaListView, Settings.Columns);
-					
+
 					GlobalWin.DisplayManager.ClearLuaSurfaces();
 					LuaImp.GuiLibrary.DrawFinish();
 					CloseLua();
@@ -411,11 +411,11 @@ namespace BizHawk.Client.EmuHawk
 		private static FileInfo GetFileFromUser(string filter)
 		{
 			var ofd = new OpenFileDialog
-				{
-					InitialDirectory = PathManager.GetLuaPath(),
-					Filter = filter,
-					RestoreDirectory = true
-				};
+			{
+				InitialDirectory = PathManager.GetLuaPath(),
+				Filter = filter,
+				RestoreDirectory = true
+			};
 
 			if (!Directory.Exists(ofd.InitialDirectory))
 			{
@@ -800,7 +800,9 @@ namespace BizHawk.Client.EmuHawk
 				FileName = !string.IsNullOrWhiteSpace(LuaImp.ScriptList.Filename) ?
 					Path.GetFileNameWithoutExtension(LuaImp.ScriptList.Filename) :
 					Path.GetFileNameWithoutExtension(Global.Game.Name),
+#if WINDOWS
 				OverwritePrompt = true,
+#endif
 				Filter = "Lua Scripts (*.lua)|*.lua|All Files (*.*)|*.*"
 			};
 
@@ -958,7 +960,9 @@ namespace BizHawk.Client.EmuHawk
 					InitialDirectory = Path.GetDirectoryName(script.Path),
 					DefaultExt = ".lua",
 					FileName = Path.GetFileNameWithoutExtension(script.Path) + " (1)",
+#if WINDOWS
 					OverwritePrompt = true,
+#endif
 					Filter = "Lua Scripts (*.lua)|*.lua|All Files (*.*)|*.*"
 				};
 
@@ -1074,9 +1078,9 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 
-		#endregion
+#endregion
 
-		#region Options
+#region Options
 
 		private void OptionsSubMenu_DropDownOpened(object sender, EventArgs e)
 		{
@@ -1177,9 +1181,9 @@ namespace BizHawk.Client.EmuHawk
 			LuaAutoInstaller.InstallBizLua(LuaAutocompleteInstaller.TextEditors.NotePad);
 		}
 
-		#endregion
+#endregion
 
-		#region Help
+#region Help
 
 		private void FunctionsListMenuItem_Click(object sender, EventArgs e)
 		{
@@ -1191,9 +1195,9 @@ namespace BizHawk.Client.EmuHawk
 			System.Diagnostics.Process.Start("http://tasvideos.org/BizHawk/LuaFunctions.html");
 		}
 
-		#endregion
+#endregion
 
-		#region Toolbar and Context Menu
+#region Toolbar and Context Menu
 
 		private void ScriptListContextMenu_Opening(object sender, CancelEventArgs e)
 		{
@@ -1231,9 +1235,9 @@ namespace BizHawk.Client.EmuHawk
 			Copy();
 		}
 
-		#endregion
+#endregion
 
-		#region Dialog, Listview, OutputBox, InputBox
+#region Dialog, Listview, OutputBox, InputBox
 
 		private void LuaConsole_DragDrop(object sender, DragEventArgs e)
 		{
@@ -1423,7 +1427,7 @@ namespace BizHawk.Client.EmuHawk
 			return false;
 		}
 
-		#endregion
+#endregion
 
 		private void EraseToolbarItem_Click(object sender, EventArgs e)
 		{
@@ -1436,6 +1440,6 @@ namespace BizHawk.Client.EmuHawk
 			base.GenericDragEnter(sender, e);
 		}
 
-		#endregion
+#endregion
 	}
 }

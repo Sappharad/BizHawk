@@ -63,16 +63,20 @@ namespace BizHawk.Client.ApiHawk
 		/// </summary>
 		static ClientApi()
 		{
+#if WINDOWS
 			clientAssembly = Assembly.GetEntryAssembly();
+#else
+			clientAssembly = Assembly.GetCallingAssembly(); //On macOS we have the wrapper which is the Entry assembly, not EmuHawk
+#endif
 			clientMainFormInstance = clientAssembly.GetType("BizHawk.Client.EmuHawk.GlobalWin").GetField("MainForm").GetValue(null);
 			mainFormClass = clientAssembly.GetType("BizHawk.Client.EmuHawk.MainForm");
 		}
 
-		#endregion
+#endregion
 
-		#region Methods
+#region Methods
 
-		#region Public
+#region Public
 		/// <summary>
 		/// THE FrameAdvance stuff
 		/// </summary>
@@ -330,7 +334,7 @@ namespace BizHawk.Client.ApiHawk
 			MethodInfo method = mainFormClass.GetMethod("UnpauseEmulator");
 			method.Invoke(clientMainFormInstance, null);
 		}
-		#endregion Public
+#endregion Public
 
 		/// <summary>
 		/// Gets all current inputs for each joypad and store
@@ -375,9 +379,9 @@ namespace BizHawk.Client.ApiHawk
 			}
 		}
 
-		#endregion
+#endregion
 
-		#region Properties
+#region Properties
 
 		/// <summary>
 		/// Gets current emulated system
@@ -436,6 +440,6 @@ namespace BizHawk.Client.ApiHawk
 			}
 		}
 
-		#endregion
+#endregion
 	}
 }

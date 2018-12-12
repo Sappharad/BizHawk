@@ -111,6 +111,9 @@
     <Reference Include="OpenTK3">
       <HintPath>..\References\OpenTK3.dll</HintPath>
     </Reference>
+    <Reference Include="CocoaUserControl">
+      <HintPath>..\BizHawk.Client.EmuHawkMacApp\64bitCocoaWinForms\CocoaUserControl.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\Version\svnrev.cs">

@@ -438,6 +438,7 @@ namespace BizHawk.Client.EmuHawk
 				GlobalWin.ExitCode = ProgramRunLoop();
 			});
 			thd.Start();
+			PresentationPanel.GraphicsControl.AddChildControl();
 		}
 
 		private readonly bool _supressSyncSettingsWarning;

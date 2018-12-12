@@ -8,7 +8,7 @@ namespace BizHawk.Bizware.BizwareGL
 	/// This is to work around the annoyance that we cant inherit from a control whose type is unknown (it would be delivered by the selected BizwareGL driver)
 	/// and so we have to resort to composition and c# sucks and events suck.
 	/// </summary>
-	public class GraphicsControl : UserControl
+	public class GraphicsControl : CocoaUserControl.CocoaUserControl
 	{
 		private bool _added;
 		public GraphicsControl(IGL owner)
@@ -27,7 +27,7 @@ namespace BizHawk.Bizware.BizwareGL
 			IGC = owner.Internal_CreateGraphicsControl();
 			Managed = IGC as Control;
 			Managed.Dock = DockStyle.Fill;
-			Controls.Add(Managed);
+			_added = false;
 
 			//pass through these events to the form. I tried really hard to find a better way, but there is none.
 			//(dont use HTTRANSPARENT, it isnt portable, I would assume)
@@ -50,6 +50,15 @@ namespace BizHawk.Bizware.BizwareGL
 		void GraphicsControl_Paint(object sender, PaintEventArgs e)
 		{
 			OnPaint(e);
+		}
+
+		public void AddChildControl(){
+			if (!_added)
+			{
+				//Hack because I need GLControl to know who its parent window is so I can't add it until the window is shown
+				Controls.Add(Managed);
+				_added = true;
+			}
 		}
 
 		public readonly IGL IGL;

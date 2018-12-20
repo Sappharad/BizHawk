@@ -36,6 +36,10 @@ namespace BizHawk.Bizware.BizwareGL.Drivers.OpenTK
 			//IGraphicsContext curr = global::OpenTK.Graphics.GraphicsContext.CurrentContext;
 			GLControl.MakeCurrent();
 			GLControl.VSync = state;
+			if (!GLControl.HasValidContext)
+			{
+				GLControl.TryRecreate();
+			}
 			//Owner.MakeContextCurrent(curr, Owner.NativeWindowsForContexts[curr]);
 		}
 

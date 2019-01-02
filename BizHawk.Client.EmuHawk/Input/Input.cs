@@ -116,14 +116,12 @@ namespace BizHawk.Client.EmuHawk
 
 		private Input()
 		{
-#if WINDOWS
 			UpdateThread = new Thread(UpdateThreadProc)
 			{
 				IsBackground = true, 
 				Priority = ThreadPriority.AboveNormal //why not? this thread shouldn't be very heavy duty, and we want it to be responsive
 			};
 			UpdateThread.Start();
-#endif
 		}
 
 		public static void Initialize()
@@ -331,7 +329,6 @@ namespace BizHawk.Client.EmuHawk
 			return FloatValuesCopy;
 		}
 
-#if WINDOWS
 		void UpdateThreadProc()
 		{
 			for (; ; )
@@ -339,6 +336,10 @@ namespace BizHawk.Client.EmuHawk
 				var keyEvents = KeyInput.Update().Concat(IPCKeyInput.Update());
 				GamePad.UpdateAll();
 				GamePad360.UpdateAll();
+#if !WINDOWS
+				OTK_Keyboard.Update();
+				//OTK_GamePad.UpdateAll();
+#endif
 
 				//this block is going to massively modify data structures that the binding method uses, so we have to lock it all
 				lock (this)
@@ -348,6 +349,13 @@ namespace BizHawk.Client.EmuHawk
 					//analyze keys
 					foreach (var ke in keyEvents)
 						HandleButton(ke.Key.ToString(), ke.Pressed);
+
+#if !WINDOWS
+					foreach (Key kb in Enum.GetValues(typeof(Key)))
+					{
+						HandleButton(kb.ToString(), OTK_Keyboard.IsPressed(kb));
+					}
+#endif
 
 					lock (FloatValues)
 					{
@@ -389,6 +397,9 @@ namespace BizHawk.Client.EmuHawk
 
 						// analyse moose
 						// other sorts of mouse api (raw input) could easily be added as a separate listing under a different class
+#if WINDOWS
+					//This was intentionally locked to windows because we can't access Form.ActiveForm from the non-UI thread on macOS,
+					//and mouse control isn't very important for games right now.
 						if (WantingMouseFocus.Contains(System.Windows.Forms.Form.ActiveForm))
 						{
 							var P = System.Windows.Forms.Control.MousePosition;
@@ -419,7 +430,25 @@ namespace BizHawk.Client.EmuHawk
 							//HandleButton("WMouse 1", false);
 							//HandleButton("WMouse 2", false);
 						}
+#else
+						//analyze joysticks
+						/*for (int i = 0; i < OTK_GamePad.Devices.Count; i++)
+						{
+							var pad = OTK_GamePad.Devices[i];
+							string jname = "J" + (i + 1) + " ";
 
+							for (int b = 0; b < pad.NumButtons; b++)
+								HandleButton(jname + pad.ButtonName(b), pad.Pressed(b));
+							foreach (var sv in pad.GetFloats())
+							{
+								string n = jname + sv.Item1;
+								float f = sv.Item2;
+								if (trackdeltas)
+									FloatDeltas[n] += Math.Abs(f - FloatValues[n]);
+								FloatValues[n] = f;
+							}
+						}*/
+#endif
 					}
 
 					//WHAT!? WE SHOULD NOT BE SO NAIVELY TOUCHING MAINFORM FROM THE INPUTTHREAD. ITS BUSY RUNNING.
@@ -441,7 +470,6 @@ namespace BizHawk.Client.EmuHawk
 				Thread.Sleep(10);
 			}
 		}
-#endif
 
 		public void StartListeningForFloatEvents()
 		{

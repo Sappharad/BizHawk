@@ -16,6 +16,8 @@ namespace BizHawk.Client.EmuHawkMacApp
 		{
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
+			Bizware.BizwareGL.Drivers.OpenTK.IGL_TK.NativeViewportScale = (int)AppKit.NSScreen.MainScreen.BackingScaleFactor;
+			//Note: If you have multiple monitors with different scale factors, this won't work. Known limitation.
 
 			//BizHawk.Common.TempFileCleaner.Start();
 

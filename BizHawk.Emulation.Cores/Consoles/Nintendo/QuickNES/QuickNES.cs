@@ -78,38 +78,47 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.QuickNES
 
 		public IEmulatorServiceProvider ServiceProvider { get; private set; }
 
+
 		#region FPU precision
 
 		private class FPCtrl : IDisposable
 		{
+#if WINDOWS
 			[DllImport("msvcrt.dll", CallingConvention = CallingConvention.Cdecl)]
 			public static extern uint _control87(uint @new, uint mask);
+#endif
 
 			public static void PrintCurrentFP()
 			{
+#if WINDOWS
 				uint curr = _control87(0, 0);
 				Console.WriteLine("Current FP word: 0x{0:x8}", curr);
+#endif
 			}
 
 			uint cw;
 
 			public IDisposable Save()
 			{
+#if WINDOWS
 				cw = _control87(0, 0);
 				_control87(0x00000, 0x30000);
+#endif
 				return this;
 			}
 			public void Dispose()
 			{
+#if WINDOWS
 				_control87(cw, 0x30000);
+#endif
 			}
 		}
 
 		FPCtrl FP = new FPCtrl();
 
-		#endregion
+#endregion
 
-		#region Controller
+#region Controller
 
 		public ControllerDefinition ControllerDefinition { get; private set; }
 
@@ -177,7 +186,7 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.QuickNES
 				j2 = 0;
 		}
 
-		#endregion
+#endregion
 
 		public void FrameAdvance(IController controller, bool render, bool rendersound = true)
 		{
@@ -233,7 +242,7 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.QuickNES
 			private set;
 		}
 
-		#region bootgod
+#region bootgod
 
 		public RomStatus? BootGodStatus { get; private set; }
 		public string BootGodName { get; private set; }
@@ -290,7 +299,7 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.QuickNES
 			}
 		}
 
-		#endregion
+#endregion
 
 		public void Dispose()
 		{
@@ -330,7 +339,7 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.QuickNES
 			return file;
 		}
 
-		#region Blacklist
+#region Blacklist
 
 		// These games are known to not work in quicknes but quicknes thinks it can run them, bail out if one of these is loaded
 		private static readonly HashSet<string> HashBlackList = new HashSet<string>
@@ -575,6 +584,6 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.QuickNES
 			"D9B1B87204E025A637821A0168475E1209CE0C8A", // Top Gun (VS)
 		};
 
-		#endregion
+#endregion
 	}
 }

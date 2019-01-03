@@ -1012,6 +1012,8 @@ namespace BizHawk.Client.EmuHawk
 				int borderWidth = Size.Width - PresentationPanel.Control.Size.Width;
 				int borderHeight = Size.Height - PresentationPanel.Control.Size.Height;
 
+				//this.AutoScaleFactor
+
 				// start at target zoom and work way down until we find acceptable zoom
 				Size lastComputedSize = new Size(1, 1);
 				for (; zoom >= 1; zoom--)

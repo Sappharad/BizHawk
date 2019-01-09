@@ -431,9 +431,11 @@ namespace BizHawk.Client.EmuHawk
 			};
 		}
 
+		private bool _handleCreated = false;
 		protected override void OnShown(EventArgs e)
 		{
 			base.OnShown(e);
+			_handleCreated = true;
 			Thread thd = new Thread(() => {
 				Thread.Sleep(1000);
 				GlobalWin.ExitCode = ProgramRunLoop();
@@ -666,44 +668,56 @@ namespace BizHawk.Client.EmuHawk
 		/// </summary>
 		public bool AllowInput(bool yieldAlt)
 		{
+			if (!_handleCreated || IsDisposed)
+			{
+				return false;
+			}
+			bool retval = false;
 			// the main form gets input
-			if (ActiveForm == this)
+			Invoke(new Action(() => 
 			{
-				return true;
-			}
-
-			// even more special logic for TAStudio:
-			// TODO - implement by event filter in TAStudio
-			var maybeTAStudio = ActiveForm as TAStudio;
-			if (maybeTAStudio != null)
-			{
-				if (yieldAlt)
+				if (ActiveForm == this)
 				{
-					return false;
+					retval = true;
+					return;
 				}
 
-				if (maybeTAStudio.IsInMenuLoop)
+				// even more special logic for TAStudio:
+				// TODO - implement by event filter in TAStudio
+				var maybeTAStudio = ActiveForm as TAStudio;
+				if (maybeTAStudio != null)
 				{
-					return false;
+					if (yieldAlt)
+					{
+						retval = false;
+						return;
+					}
+
+					if (maybeTAStudio.IsInMenuLoop)
+					{
+						retval = false;
+						return;
+					}
 				}
-			}
 
-			// modals that need to capture input for binding purposes get input, of course
-			if (ActiveForm is HotkeyConfig
-				|| ActiveForm is ControllerConfig
-				|| ActiveForm is TAStudio
-				|| ActiveForm is VirtualpadTool)
-			{
-				return true;
-			}
+				// modals that need to capture input for binding purposes get input, of course
+				if (ActiveForm is HotkeyConfig
+					|| ActiveForm is ControllerConfig
+					|| ActiveForm is TAStudio
+					|| ActiveForm is VirtualpadTool)
+				{
+					retval = true;
+					return;
+				}
 
-			// if no form is active on this process, then the background input setting applies
-			if (ActiveForm == null && Global.Config.AcceptBackgroundInput)
-			{
-				return true;
-			}
-
-			return false;
+				// if no form is active on this process, then the background input setting applies
+				if (ActiveForm == null && Global.Config.AcceptBackgroundInput)
+				{
+					retval = true;
+					return;
+				}
+			}));
+			return retval;
 		}
 
 		// TODO: make this an actual property, set it when loading a Rom, and pass it dialogs, etc

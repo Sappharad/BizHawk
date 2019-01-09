@@ -2,8 +2,11 @@
 using System.Linq;
 using System.Collections.Generic;
 using System.Threading;
-
+#if WINDOWS
 using SlimDX.DirectInput;
+#else
+using OpenTK.Input;
+#endif
 
 using BizHawk.Common;
 using BizHawk.Client.Common;
@@ -16,7 +19,7 @@ namespace BizHawk.Client.EmuHawk
 		public void Receive(Input.InputEvent ie)
 		{
 			bool state = ie.EventType == Input.InputEventType.Press;
-			
+
 			string button = ie.LogicalButton.ToString();
 			Buttons[button] = state;
 
@@ -115,7 +118,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			UpdateThread = new Thread(UpdateThreadProc)
 			{
-				IsBackground = true, 
+				IsBackground = true,
 				Priority = ThreadPriority.AboveNormal //why not? this thread shouldn't be very heavy duty, and we want it to be responsive
 			};
 			UpdateThread.Start();
@@ -123,28 +126,24 @@ namespace BizHawk.Client.EmuHawk
 
 		public static void Initialize()
 		{
-			if (PlatformLinkedLibSingleton.RunningOnUnix)
-			{
-				OTK_Keyboard.Initialize();
-//				OTK_Gamepad.Initialize();
-			}
-			else
-			{
-				KeyInput.Initialize();
-				IPCKeyInput.Initialize();
-				GamePad.Initialize();
-				GamePad360.Initialize();
-			}
+#if !WINDOWS
+			OTK_Keyboard.Initialize();
+			//OTK_Gamepad.Initialize();
+#else
+			KeyInput.Initialize();
+			IPCKeyInput.Initialize();
+			GamePad.Initialize();
+			GamePad360.Initialize();
+#endif
 			Instance = new Input();
 		}
 
 		public static void Cleanup()
 		{
-			if (!PlatformLinkedLibSingleton.RunningOnUnix)
-			{
-				KeyInput.Cleanup();
-				GamePad.Cleanup();
-			}
+#if WINDOWS
+			KeyInput.Cleanup();
+			GamePad.Cleanup();
+#endif
 		}
 
 		public enum InputEventType
@@ -251,10 +250,10 @@ namespace BizHawk.Client.EmuHawk
 			if (button == "RightAlt") mods &= ~ModifierKey.Alt;
 
 			var ie = new InputEvent
-				{
-					EventType = newState ? InputEventType.Press : InputEventType.Release,
-					LogicalButton = new LogicalButton(button, mods)
-				};
+			{
+				EventType = newState ? InputEventType.Press : InputEventType.Release,
+				LogicalButton = new LogicalButton(button, mods)
+			};
 			LastState[button] = newState;
 
 			//track the pressed events with modifiers that we send so that we can send corresponding unpresses with modifiers
@@ -274,10 +273,10 @@ namespace BizHawk.Client.EmuHawk
 				{
 					LogicalButton alreadyReleased = ie.LogicalButton;
 					var ieModified = new InputEvent
-						{
-							LogicalButton = (LogicalButton)ModifierState[button],
-							EventType = InputEventType.Release
-						};
+					{
+						LogicalButton = (LogicalButton)ModifierState[button],
+						EventType = InputEventType.Release
+					};
 					if (ieModified.LogicalButton != alreadyReleased)
 						_NewEvents.Add(ieModified);
 				}
@@ -318,7 +317,7 @@ namespace BizHawk.Client.EmuHawk
 
 		public List<Tuple<string, float>> GetFloats()
 		{
-			List<Tuple<string, float>> FloatValuesCopy = new List<Tuple<string,float>>();
+			List<Tuple<string, float>> FloatValuesCopy = new List<Tuple<string, float>>();
 			lock (FloatValues)
 			{
 				foreach (var kvp in FloatValues)
@@ -329,20 +328,15 @@ namespace BizHawk.Client.EmuHawk
 
 		void UpdateThreadProc()
 		{
-			while (true)
+			for (; ; )
 			{
-				var keyEvents = PlatformLinkedLibSingleton.RunningOnUnix
-					? OTK_Keyboard.Update()
-					: KeyInput.Update().Concat(IPCKeyInput.Update());
-				if (PlatformLinkedLibSingleton.RunningOnUnix)
-				{
-					//TODO
-				}
-				else
-				{
-					GamePad.UpdateAll();
-					GamePad360.UpdateAll();
-				}
+				var keyEvents = KeyInput.Update().Concat(IPCKeyInput.Update());
+				GamePad.UpdateAll();
+				GamePad360.UpdateAll();
+#if !WINDOWS
+				OTK_Keyboard.Update();
+				//OTK_GamePad.UpdateAll();
+#endif
 
 				//this block is going to massively modify data structures that the binding method uses, so we have to lock it all
 				lock (this)
@@ -352,6 +346,13 @@ namespace BizHawk.Client.EmuHawk
 					//analyze keys
 					foreach (var ke in keyEvents)
 						HandleButton(ke.Key.ToString(), ke.Pressed);
+
+#if !WINDOWS
+					foreach (Key kb in Enum.GetValues(typeof(Key)))
+					{
+						HandleButton(kb.ToString(), OTK_Keyboard.IsPressed(kb));
+					}
+#endif
 
 					lock (FloatValues)
 					{
@@ -393,6 +394,9 @@ namespace BizHawk.Client.EmuHawk
 
 						// analyse moose
 						// other sorts of mouse api (raw input) could easily be added as a separate listing under a different class
+#if WINDOWS
+					//This was intentionally locked to windows because we can't access Form.ActiveForm from the non-UI thread on macOS,
+					//and mouse control isn't very important for games right now.
 						if (WantingMouseFocus.Contains(System.Windows.Forms.Form.ActiveForm))
 						{
 							var P = System.Windows.Forms.Control.MousePosition;
@@ -423,7 +427,25 @@ namespace BizHawk.Client.EmuHawk
 							//HandleButton("WMouse 1", false);
 							//HandleButton("WMouse 2", false);
 						}
+#else
+						//analyze joysticks
+						/*for (int i = 0; i < OTK_GamePad.Devices.Count; i++)
+						{
+							var pad = OTK_GamePad.Devices[i];
+							string jname = "J" + (i + 1) + " ";
 
+							for (int b = 0; b < pad.NumButtons; b++)
+								HandleButton(jname + pad.ButtonName(b), pad.Pressed(b));
+							foreach (var sv in pad.GetFloats())
+							{
+								string n = jname + sv.Item1;
+								float f = sv.Item2;
+								if (trackdeltas)
+									FloatDeltas[n] += Math.Abs(f - FloatValues[n]);
+								FloatValues[n] = f;
+							}
+						}*/
+#endif
 					}
 
 					//WHAT!? WE SHOULD NOT BE SO NAIVELY TOUCHING MAINFORM FROM THE INPUTTHREAD. ITS BUSY RUNNING.
@@ -507,7 +529,7 @@ namespace BizHawk.Client.EmuHawk
 
 					if (ie.EventType == InputEventType.Press) continue;
 
-				ACCEPT:
+					ACCEPT:
 					Console.WriteLine("Bind Event: {0} ", ie);
 
 					foreach (var kvp in LastState)

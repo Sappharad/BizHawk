@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
-
 using Microsoft.VisualBasic.ApplicationServices;
 
 using BizHawk.Common;
@@ -396,7 +395,6 @@ REDO_DISPMETHOD:
 			}
 		}
 
-//#if WINDOWS
 		public class SingleInstanceController : WindowsFormsApplicationBase
 		{
 			private readonly string[] cmdArgs;
@@ -425,8 +423,5 @@ REDO_DISPMETHOD:
 				GlobalWin.ExitCode = ((MainForm)MainForm).ProgramRunLoop();
 			}
 		}
-//#endif
-
-
 	}
 }

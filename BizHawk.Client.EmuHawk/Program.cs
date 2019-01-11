@@ -22,37 +22,17 @@ namespace BizHawk.Client.EmuHawk
 
 			if (EXE_PROJECT.OSTailoredCode.CurrentOS == EXE_PROJECT.OSTailoredCode.DistinctOS.Windows)
 			{
-				var libLoader = EXE_PROJECT.OSTailoredCode.LinkedLibManager;
-
-				//http://www.codeproject.com/Articles/310675/AppDomain-AssemblyResolve-Event-Tips
-
-				//try loading libraries we know we'll need
-				//something in the winforms, etc. code below will cause .net to popup a missing msvcr100.dll in case that one's missing
-				//but oddly it lets us proceed and we'll then catch it here
-				var d3dx9 = libLoader.LoadPlatformSpecific("d3dx9_43.dll");
-				var vc2015 = libLoader.LoadPlatformSpecific("vcruntime140.dll");
-				var vc2012 = libLoader.LoadPlatformSpecific("msvcr120.dll"); //TODO - check version?
-				var vc2010 = libLoader.LoadPlatformSpecific("msvcr100.dll"); //TODO - check version?
-				var vc2010p = libLoader.LoadPlatformSpecific("msvcp100.dll");
-				var fail = vc2015 == IntPtr.Zero || vc2010 == IntPtr.Zero || vc2012 == IntPtr.Zero || vc2010p == IntPtr.Zero;
-				var warn = d3dx9 == IntPtr.Zero;
-				if (fail || warn)
-				{
-					var alertLines = new[]
-					{
-						"[ OK ] .NET CLR (You wouldn't even get here without it)",
-						$"[{(d3dx9 == IntPtr.Zero ? "WARN" : " OK ")}] Direct3d 9",
-						$"[{(vc2010 == IntPtr.Zero || vc2010p == IntPtr.Zero ? "FAIL" : " OK ")}] Visual C++ 2010 SP1 Runtime",
-						$"[{(vc2012 == IntPtr.Zero ? "FAIL" : " OK ")}] Visual C++ 2012 Runtime",
-						$"[{(vc2015 == IntPtr.Zero ? "FAIL" : " OK ")}] Visual C++ 2015 Runtime"
-					};
-					var box = new BizHawk.Client.EmuHawk.CustomControls.PrereqsAlert(!fail)
-					{
-						textBox1 = { Text = string.Concat("\n", alertLines) }
-					};
-					box.ShowDialog();
-					if (fail) System.Diagnostics.Process.GetCurrentProcess().Kill();
-				}
+				var sw = new System.IO.StringWriter();
+				sw.WriteLine("[ OK ] .Net 4.6.1 (You couldn't even get here without it)");
+				sw.WriteLine("[{0}] Direct3d 9", d3dx9 == IntPtr.Zero ? "FAIL" : " OK ");
+				sw.WriteLine("[{0}] Visual C++ 2010 SP1 Runtime", (vc2010 == IntPtr.Zero || vc2010p == IntPtr.Zero) ? "FAIL" : " OK ");
+				sw.WriteLine("[{0}] Visual C++ 2012 Runtime", (vc2012 == IntPtr.Zero) ? "FAIL" : " OK ");
+				sw.WriteLine("[{0}] Visual C++ 2015 Runtime", (vc2015 == IntPtr.Zero) ? "FAIL" : " OK ");
+				var box = new BizHawk.Client.EmuHawk.CustomControls.PrereqsAlert(!fail);
+				box.textBox1.Text = sw.ToString();
+				box.ShowDialog();
+				if (fail) System.Diagnostics.Process.GetCurrentProcess().Kill();
+			}
 
 				libLoader.FreePlatformSpecific(d3dx9);
 				libLoader.FreePlatformSpecific(vc2015);
@@ -131,7 +111,7 @@ namespace BizHawk.Client.EmuHawk
 			BizHawk.Client.Common.StringLogUtil.DefaultToAWE = Global.Config.MoviesInAWE;
 
 			// super hacky! this needs to be done first. still not worth the trouble to make this system fully proper
-			if (Array.Exists(args, arg => arg.StartsWith("--gdi", StringComparison.InvariantCultureIgnoreCase)))
+			if (Array.Exists(args, arg => arg.ToLower().StartsWith("--gdi")))
 			{
 				Global.Config.DispMethod = Config.EDispMethod.GdiPlus;
 			}
@@ -158,7 +138,8 @@ REDO_DISPMETHOD:
 				}
 				catch(Exception ex)
 				{
-					new ExceptionBox(new Exception("Initialization of Direct3d 9 Display Method failed; falling back to GDI+", ex)).ShowDialog();
+					new ExceptionBox(new Exception("Initialization of Direct3d 9 Display Method failed; falling back to GDI+", ex))
+						.ShowDialog();
 
 					// fallback
 					Global.Config.DispMethod = Config.EDispMethod.GdiPlus;
@@ -185,8 +166,8 @@ REDO_DISPMETHOD:
 			}
 			catch(Exception ex)
 			{
-				new ExceptionBox(new Exception("Initialization of Display Method failed; falling back to GDI+", ex)).ShowDialog();
-
+				new ExceptionBox(new Exception("Initialization of Display Method failed; falling back to GDI+", ex))
+					.ShowDialog();
 				//fallback
 				Global.Config.DispMethod = Config.EDispMethod.GdiPlus;
 				goto REDO_DISPMETHOD;
@@ -199,8 +180,7 @@ REDO_DISPMETHOD:
 				//It isn't clear whether we need the earlier SetDllDirectory(), but I think we do.
 				//note: this is pasted instead of being put in a static method due to this initialization code being sensitive to things like that, and not wanting to cause it to break
 				//pasting should be safe (not affecting the jit order of things)
-				var dllDir = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "dll");
-				SetDllDirectory(dllDir);
+				SetDllDirectory(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "dll"));
 			}
 
 			try
@@ -209,7 +189,7 @@ REDO_DISPMETHOD:
 				{
 					try
 					{
-						new SingleInstanceController(args).Run(args);
+						new SingleInstanceController(args).RunWithArgs();
 					}
 					catch (ObjectDisposedException)
 					{
@@ -315,22 +295,22 @@ REDO_DISPMETHOD:
 				//this method referencing Global.Config makes assemblies get loaded, which isnt smart from the assembly resolver.
 				//so.. we're going to resort to something really bad.
 				//avert your eyes.
-				var configPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "config.ini");
-				if (EXE_PROJECT.OSTailoredCode.CurrentOS == EXE_PROJECT.OSTailoredCode.DistinctOS.Windows // LuaInterface is not currently working on Mono
-					&& File.Exists(configPath)
-					&& (Array.Find(File.ReadAllLines(configPath), line => line.Contains("  \"UseNLua\": ")) ?? string.Empty)
-						.Contains("false"))
+				bool UseNLua = true;
+				string configPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "config.ini");
+				if (File.Exists(configPath) && (
+					File.ReadAllLines(configPath)
+						.FirstOrDefault(line => line.Contains("  \"UseNLua\": "))
+						?.Contains("false")
+						?? false))
 				{
+					UseNLua = false;
+				}
+
+				if (!UseNLua && !EXE_PROJECT.PlatformLinkedLibSingleton.RunningOnUnix)
+				{
+					// currently LuaInterface is not working/implemented on Mono so we always force NLua, otherwise:
 					requested = "LuaInterface";
 				}
-				
-				if (UseNLua) { }
-				else if (EXE_PROJECT.PlatformLinkedLibSingleton.RunningOnUnix)
-				{
-					// currently LuaInterface is not working/implemented on Mono
-					// so we always force NLua
-				}
-				else requested = "LuaInterface";
 			}
 
 			lock (AppDomain.CurrentDomain)
@@ -360,9 +340,12 @@ REDO_DISPMETHOD:
 				StartupNextInstance += this_StartupNextInstance;
 			}
 
-			public void Run() => Run(cmdArgs);
+			public void RunWithArgs()
+			{
+				Run(cmdArgs);
+			}
 
-			private void this_StartupNextInstance(object sender, StartupNextInstanceEventArgs e)
+			void this_StartupNextInstance(object sender, StartupNextInstanceEventArgs e)
 			{
 				if (e.CommandLine.Count >= 1)
 					((MainForm)MainForm).LoadRom(e.CommandLine[0], new MainForm.LoadRomArgs { OpenAdvanced = new OpenAdvanced_OpenRom() });

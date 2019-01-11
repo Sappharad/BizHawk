@@ -99,15 +99,12 @@ namespace BizHawk.Client.EmuHawk
 			if (_cdl == null)
 			{
 				lvCDL.BeginUpdate();
-				if (OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows)
-				{
-					lvCDL.Items.Clear();
-				}
-				else
+				if (!PlatformLinkedLibSingleton.RunningOnUnix)
 				{
 					// this is a winforms implementation problem for mono
 					// see https://github.com/mono/mono/issues/11070
 					// until this is resolved in mono we should just skip this call
+					lvCDL.Items.Clear();
 				}
 				lvCDL.EndUpdate();
 				return;

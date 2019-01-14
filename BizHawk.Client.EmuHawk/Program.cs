@@ -90,7 +90,10 @@ namespace BizHawk.Client.EmuHawk
 
 			BizHawk.Common.TempFileManager.Start();
 
-			HawkFile.ArchiveHandlerFactory = new SevenZipSharpArchiveHandler();
+			if (PlatformLinkedLibSingleton.RunningOnUnix)
+				HawkFile.ArchiveHandlerFactory = new SharpCompressArchiveHandler();
+			else
+				HawkFile.ArchiveHandlerFactory = new SevenZipSharpArchiveHandler();
 
 			string cmdConfigFile = ArgParser.GetCmdConfigFile(args);
 			if (cmdConfigFile != null) PathManager.SetDefaultIniPath(cmdConfigFile);

@@ -88,15 +88,19 @@ namespace BizHawk.Client.EmuHawk
 				}
 			}
 
-			BizHawk.Common.TempFileManager.Start();
-
+			BizHawk.Common.TempFileManager.Start();			
+			
 			if (PlatformLinkedLibSingleton.RunningOnUnix)
 				HawkFile.ArchiveHandlerFactory = new SharpCompressArchiveHandler();
 			else
 				HawkFile.ArchiveHandlerFactory = new SevenZipSharpArchiveHandler();
 
-			string cmdConfigFile = ArgParser.GetCmdConfigFile(args);
-			if (cmdConfigFile != null) PathManager.SetDefaultIniPath(cmdConfigFile);
+			// testing
+			//HawkFile.ArchiveHandlerFactory = new SharpCompressArchiveHandler();
+
+			ArgParser argParser = new ArgParser();
+			argParser.ParseArguments(args);
+			if (argParser.cmdConfigFile != null) PathManager.SetDefaultIniPath(argParser.cmdConfigFile);
 
 			try
 			{

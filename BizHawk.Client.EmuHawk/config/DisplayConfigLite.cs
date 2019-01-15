@@ -86,16 +86,11 @@ namespace BizHawk.Client.EmuHawk
 			if (Global.Config.DispCustomUserARY != -1)
 				txtCustomARY.Text = Global.Config.DispCustomUserARY.ToString();
 
-			txtCropLeft.Text = Global.Config.DispCropLeft.ToString();
-			txtCropTop.Text = Global.Config.DispCropTop.ToString();
-			txtCropRight.Text = Global.Config.DispCropRight.ToString();
-			txtCropBottom.Text = Global.Config.DispCropBottom.ToString();
-
 			RefreshAspectRatioOptions();
 
-			if (OSTailoredCode.CurrentOS != OSTailoredCode.DistinctOS.Windows)
+			if (PlatformLinkedLibSingleton.RunningOnUnix)
 			{
-				// Disable SlimDX on Unix
+				// no slimdx
 				rbD3D9.Enabled = false;
 				rbD3D9.AutoCheck = false;
 				cbAlternateVsync.Enabled = false;
@@ -189,11 +184,6 @@ namespace BizHawk.Client.EmuHawk
 			if(rbD3D9.Checked)
 				Global.Config.DispMethod = Config.EDispMethod.SlimDX9;
 
-			int.TryParse(txtCropLeft.Text, out Global.Config.DispCropLeft);
-			int.TryParse(txtCropTop.Text, out Global.Config.DispCropTop);
-			int.TryParse(txtCropRight.Text, out Global.Config.DispCropRight);
-			int.TryParse(txtCropBottom.Text, out Global.Config.DispCropBottom);
-
 			if (oldDisplayMethod != Global.Config.DispMethod)
 				NeedReset = true;
 
@@ -281,7 +271,7 @@ namespace BizHawk.Client.EmuHawk
 			Global.Config.TargetScanlineFilterIntensity = tbScanlineIntensity.Value;
 			int scanlines = Global.Config.TargetScanlineFilterIntensity;
 			float percentage = (float) scanlines / 256 * 100;
-			lblScanlines.Text = $"{percentage:F2}%";
+			lblScanlines.Text = String.Format("{0:F2}", percentage) + "%";
 		}
 
 		private void trackbarFrameSizeWindowed_ValueChanged(object sender, EventArgs e)

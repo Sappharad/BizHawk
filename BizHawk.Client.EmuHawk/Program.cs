@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Diagnostics;
 using System.IO;
 using System.Collections.Generic;
@@ -12,7 +13,7 @@ using BizHawk.Client.Common;
 
 namespace BizHawk.Client.EmuHawk
 {
-	internal static class Program
+	static class Program
 	{
 		static Program()
 		{
@@ -20,7 +21,26 @@ namespace BizHawk.Client.EmuHawk
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
 
-			if (EXE_PROJECT.OSTailoredCode.CurrentOS == EXE_PROJECT.OSTailoredCode.DistinctOS.Windows)
+			var libLoader = EXE_PROJECT.PlatformLinkedLibSingleton.LinkedLibManager;
+
+			//http://www.codeproject.com/Articles/310675/AppDomain-AssemblyResolve-Event-Tips
+
+			//try loading libraries we know we'll need
+			//something in the winforms, etc. code below will cause .net to popup a missing msvcr100.dll in case that one's missing
+			//but oddly it lets us proceed and we'll then catch it here
+			var libExt = EXE_PROJECT.PlatformLinkedLibSingleton.RunningOnUnix ? ".dll.so" : ".dll";
+			var d3dx9 = libLoader.LoadPlatformSpecific($"d3dx9_43{libExt}");
+			var vc2015 = libLoader.LoadPlatformSpecific($"vcruntime140{libExt}");
+			var vc2012 = libLoader.LoadPlatformSpecific($"msvcr120{libExt}"); //TODO - check version?
+			var vc2010 = libLoader.LoadPlatformSpecific($"msvcr100{libExt}"); //TODO - check version?
+			var vc2010p = libLoader.LoadPlatformSpecific($"msvcp100{libExt}");
+			bool fail = false, warn = false;
+			warn |= d3dx9 == IntPtr.Zero;
+			fail |= vc2015 == IntPtr.Zero;
+			fail |= vc2010 == IntPtr.Zero;
+			fail |= vc2012 == IntPtr.Zero;
+			fail |= vc2010p == IntPtr.Zero;
+			if (fail || warn)
 			{
 				var sw = new System.IO.StringWriter();
 				sw.WriteLine("[ OK ] .Net 4.6.1 (You couldn't even get here without it)");
@@ -34,18 +54,20 @@ namespace BizHawk.Client.EmuHawk
 				if (fail) System.Diagnostics.Process.GetCurrentProcess().Kill();
 			}
 
-				libLoader.FreePlatformSpecific(d3dx9);
-				libLoader.FreePlatformSpecific(vc2015);
-				libLoader.FreePlatformSpecific(vc2012);
-				libLoader.FreePlatformSpecific(vc2010);
-				libLoader.FreePlatformSpecific(vc2010p);
+			libLoader.FreePlatformSpecific(d3dx9);
+			libLoader.FreePlatformSpecific(vc2015);
+			libLoader.FreePlatformSpecific(vc2012);
+			libLoader.FreePlatformSpecific(vc2010);
+			libLoader.FreePlatformSpecific(vc2010p);
 
+			if (!EXE_PROJECT.PlatformLinkedLibSingleton.RunningOnUnix)
+			{
 				// this will look in subdirectory "dll" to load pinvoked stuff
-				var dllDir = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "dll");
+				string dllDir = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "dll");
 				SetDllDirectory(dllDir);
 
 				//in case assembly resolution fails, such as if we moved them into the dll subdiretory, this event handler can reroute to them
-				AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
+				AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
 
 				//but before we even try doing that, whack the MOTW from everything in that directory (thats a dll)
 				//otherwise, some people will have crashes at boot-up due to .net security disliking MOTW.
@@ -63,14 +85,14 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		[STAThread]
-		private static int Main(string[] args)
+		static int Main(string[] args)
 		{
 			return SubMain(args);
 		}
 
 		//NoInlining should keep this code from getting jammed into Main() which would create dependencies on types which havent been setup by the resolver yet... or something like that
 		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
-		private static int SubMain(string[] args)
+		static int SubMain(string[] args)
 		{
 			// this check has to be done VERY early.  i stepped through a debug build with wrong .dll versions purposely used,
 			// and there was a TypeLoadException before the first line of SubMain was reached (some static ColorType init?)
@@ -95,7 +117,7 @@ namespace BizHawk.Client.EmuHawk
 			else
 				HawkFile.ArchiveHandlerFactory = new SevenZipSharpArchiveHandler();
 
-			// testing
+			// Uncomment for system-agnostic glory!
 			//HawkFile.ArchiveHandlerFactory = new SharpCompressArchiveHandler();
 
 			ArgParser argParser = new ArgParser();
@@ -131,10 +153,25 @@ namespace BizHawk.Client.EmuHawk
 			GlobalWin.GLManager = GLManager.Instance;
 
 			//now create the "GL" context for the display method. we can reuse the IGL_TK context if opengl display method is chosen
-			if (EXE_PROJECT.OSTailoredCode.CurrentOS != EXE_PROJECT.OSTailoredCode.DistinctOS.Windows)
-				Global.Config.DispMethod = Config.EDispMethod.GdiPlus;
+			if (EXE_PROJECT.PlatformLinkedLibSingleton.RunningOnUnix)
+			{
+				try
+				{
+					// no SlimDX in mono - so don't even bother trying
+					Global.Config.DispMethod = Config.EDispMethod.OpenGL;
+				}
+				catch (Exception ex)
+				{
+					new ExceptionBox(new Exception("Initialization of OpenGL Display Method failed (do you have nvidia-cg-toolkit installed?); falling back to GDI+", ex))
+						.ShowDialog();
 
-REDO_DISPMETHOD:
+					// fallback
+					Global.Config.DispMethod = Config.EDispMethod.GdiPlus;
+					goto REDO_DISPMETHOD;
+				}
+			}
+
+		REDO_DISPMETHOD:
 			if (Global.Config.DispMethod == Config.EDispMethod.GdiPlus)
 				GlobalWin.GL = new Bizware.BizwareGL.Drivers.GdiPlus.IGL_GdiPlus();
 			else if (Global.Config.DispMethod == Config.EDispMethod.SlimDX9)
@@ -180,7 +217,7 @@ REDO_DISPMETHOD:
 				goto REDO_DISPMETHOD;
 			}
 
-			if (EXE_PROJECT.OSTailoredCode.CurrentOS == EXE_PROJECT.OSTailoredCode.DistinctOS.Windows)
+			if (!EXE_PROJECT.PlatformLinkedLibSingleton.RunningOnUnix)
 			{
 				//WHY do we have to do this? some intel graphics drivers (ig7icd64.dll 10.18.10.3304 on an unknown chip on win8.1) are calling SetDllDirectory() for the process, which ruins stuff.
 				//The relevant initialization happened just before in "create IGL context".
@@ -259,19 +296,19 @@ REDO_DISPMETHOD:
 		} //SubMain
 
 		//declared here instead of a more usual place to avoid dependencies on the more usual place
-
+#if WINDOWS
 		[DllImport("kernel32.dll", SetLastError = true)]
-		private static extern uint SetDllDirectory(string lpPathName);
+		static extern uint SetDllDirectory(string lpPathName);
 
 		[DllImport("kernel32.dll", EntryPoint = "DeleteFileW", SetLastError = true, CharSet = CharSet.Unicode, ExactSpelling = true)]
-		private static extern bool DeleteFileW([MarshalAs(UnmanagedType.LPWStr)]string lpFileName);
+		static extern bool DeleteFileW([MarshalAs(UnmanagedType.LPWStr)]string lpFileName);
 
-		private static void RemoveMOTW(string path)
+		public static void RemoveMOTW(string path)
 		{
-			DeleteFileW($"{path}:Zone.Identifier");
+			DeleteFileW(path + ":Zone.Identifier");
 		}
 
-		private static void WhackAllMOTW(string dllDir)
+		static void WhackAllMOTW(string dllDir)
 		{
 			var todo = new Queue<DirectoryInfo>(new[] { new DirectoryInfo(dllDir) });
 			while (todo.Count > 0)
@@ -283,11 +320,14 @@ REDO_DISPMETHOD:
 				foreach (var fi in di.GetFiles("*.exe"))
 					RemoveMOTW(fi.FullName);
 			}
-		}
 
-		private static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
+		}
+#endif
+
+
+		static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
 		{
-			var requested = args.Name;
+			string requested = args.Name;
 
 			//mutate filename depending on selection of lua core. here's how it works
 			//1. we build NLua to the output/dll/lua directory. that brings KopiLua with it
@@ -326,20 +366,21 @@ REDO_DISPMETHOD:
 				if (firstAsm != null) return firstAsm;
 
 				//load missing assemblies by trying to find them in the dll directory
-				var dllname = $"{new AssemblyName(requested).Name}.dll";
-				var directory = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "dll");
-				var simpleName = new AssemblyName(requested).Name;
+				string dllname = new AssemblyName(requested).Name + ".dll";
+				string directory = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "dll");
+				string simpleName = new AssemblyName(requested).Name;
 				if (simpleName == "NLua" || simpleName == "KopiLua") directory = Path.Combine(directory, "nlua");
-				var fname = Path.Combine(directory, dllname);
-				//it is important that we use LoadFile here and not load from a byte array; otherwise mixed (managed/unmanaged) assemblies can't load
-				return File.Exists(fname) ? Assembly.LoadFile(fname) : null;
+				string fname = Path.Combine(directory, dllname);
+				if (!File.Exists(fname)) return null;
+
+				//it is important that we use LoadFile here and not load from a byte array; otherwise mixed (managed/unamanged) assemblies can't load
+				return Assembly.LoadFile(fname);
 			}
 		}
 
 		public class SingleInstanceController : WindowsFormsApplicationBase
 		{
-			private readonly string[] cmdArgs;
-
+			readonly string[] cmdArgs;
 			public SingleInstanceController(string[] args)
 			{
 				cmdArgs = args;
@@ -355,7 +396,7 @@ REDO_DISPMETHOD:
 			void this_StartupNextInstance(object sender, StartupNextInstanceEventArgs e)
 			{
 				if (e.CommandLine.Count >= 1)
-					((MainForm)MainForm).LoadRom(e.CommandLine[0], new MainForm.LoadRomArgs { OpenAdvanced = new OpenAdvanced_OpenRom() });
+					(MainForm as MainForm).LoadRom(e.CommandLine[0], new MainForm.LoadRomArgs() { OpenAdvanced = new OpenAdvanced_OpenRom() });
 			}
 
 			protected override void OnCreateMainForm()
@@ -364,7 +405,7 @@ REDO_DISPMETHOD:
 				var title = MainForm.Text;
 				MainForm.Show();
 				MainForm.Text = title;
-				GlobalWin.ExitCode = ((MainForm)MainForm).ProgramRunLoop();
+				GlobalWin.ExitCode = (MainForm as MainForm).ProgramRunLoop();
 			}
 		}
 	}

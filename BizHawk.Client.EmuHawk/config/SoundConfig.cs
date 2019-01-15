@@ -26,9 +26,8 @@ namespace BizHawk.Client.EmuHawk
 			cbEnableRWFF.Checked = Global.Config.SoundEnabledRWFF;
 			cbMuteFrameAdvance.Checked = Global.Config.MuteFrameAdvance;
 
-			if (OSTailoredCode.CurrentOS != OSTailoredCode.DistinctOS.Windows)
+			if (PlatformLinkedLibSingleton.RunningOnUnix)
 			{
-				// Disable DirectSound and XAudio2 on Mono
 				rbOutputMethodDirectSound.Enabled = false;
 				rbOutputMethodXAudio2.Enabled = false;
 			}
@@ -88,13 +87,14 @@ namespace BizHawk.Client.EmuHawk
 		private void PopulateDeviceList()
 		{
 			IEnumerable<string> deviceNames = Enumerable.Empty<string>();
-			if (OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows)
+
+			if (!PlatformLinkedLibSingleton.RunningOnUnix)
 			{
 				if (rbOutputMethodDirectSound.Checked) deviceNames = DirectSoundSoundOutput.GetDeviceNames();
 				if (rbOutputMethodXAudio2.Checked) deviceNames = XAudio2SoundOutput.GetDeviceNames();
 			}
-			if (rbOutputMethodOpenAL.Checked) deviceNames = OpenALSoundOutput.GetDeviceNames();
 
+			if (rbOutputMethodOpenAL.Checked) deviceNames = OpenALSoundOutput.GetDeviceNames();
 			listBoxSoundDevices.Items.Clear();
 			listBoxSoundDevices.Items.Add("<default>");
 			listBoxSoundDevices.SelectedIndex = 0;

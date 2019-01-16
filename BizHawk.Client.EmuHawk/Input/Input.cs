@@ -123,24 +123,24 @@ namespace BizHawk.Client.EmuHawk
 
 		public static void Initialize()
 		{
-			if (OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows)
+			if (PlatformLinkedLibSingleton.RunningOnUnix)
+			{
+				OTK_Keyboard.Initialize();
+				OTK_GamePad.Initialize();
+			}
+			else
 			{
 				KeyInput.Initialize();
 				IPCKeyInput.Initialize();
 				GamePad.Initialize();
 				GamePad360.Initialize();
 			}
-			else
-			{
-				OTK_Keyboard.Initialize();
-//				OTK_Gamepad.Initialize();
-			}
 			Instance = new Input();
 		}
 
 		public static void Cleanup()
 		{
-			if (OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows)
+			if (!PlatformLinkedLibSingleton.RunningOnUnix)
 			{
 				KeyInput.Cleanup();
 				GamePad.Cleanup();
@@ -198,7 +198,7 @@ namespace BizHawk.Client.EmuHawk
 			public InputEventType EventType;
 			public override string ToString()
 			{
-				return $"{EventType.ToString()}:{LogicalButton.ToString()}";
+				return string.Format("{0}:{1}", EventType.ToString(), LogicalButton.ToString());
 			}
 		}
 
@@ -234,7 +234,7 @@ namespace BizHawk.Client.EmuHawk
 			if (UnpressState.ContainsKey(button))
 			{
 				if (newState) return;
-				Console.WriteLine($"Removing Unpress {button} with {nameof(newState)} {newState}");
+				Console.WriteLine("Removing Unpress {0} with newState {1}", button, newState);
 				UnpressState.Remove(button);
 				LastState[button] = false;
 				return;
@@ -331,17 +331,17 @@ namespace BizHawk.Client.EmuHawk
 		{
 			while (true)
 			{
-				var keyEvents = OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows
-					? KeyInput.Update().Concat(IPCKeyInput.Update())
-					: OTK_Keyboard.Update();
-				if (OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows)
+				var keyEvents = PlatformLinkedLibSingleton.RunningOnUnix
+					? OTK_Keyboard.Update()
+					: KeyInput.Update().Concat(IPCKeyInput.Update());
+				if (PlatformLinkedLibSingleton.RunningOnUnix)
 				{
-					GamePad.UpdateAll();
-					GamePad360.UpdateAll();
+					OTK_GamePad.UpdateAll();
 				}
 				else
 				{
-					//TODO
+					GamePad.UpdateAll();
+					GamePad360.UpdateAll();
 				}
 
 				//this block is going to massively modify data structures that the binding method uses, so we have to lock it all
@@ -357,10 +357,26 @@ namespace BizHawk.Client.EmuHawk
 					{
 						//FloatValues.Clear();
 
+						//analyze OTK xinput (libinput?)
+						foreach (var pad in OTK_GamePad.EnumerateDevices())
+						{
+							string xname = pad.ID + " ";
+							for (int b = 0; b < pad.NumButtons; b++)
+								HandleButton(xname + pad.ButtonName(b), pad.Pressed(b));
+							foreach (var sv in pad.GetFloats())
+							{
+								string n = xname + sv.Item1;
+								float f = sv.Item2;
+								if (trackdeltas)
+									FloatDeltas[n] += Math.Abs(f - FloatValues[n]);
+								FloatValues[n] = f;
+							}
+						}
+
 						//analyze xinput
 						foreach (var pad in GamePad360.EnumerateDevices())
 						{
-							string xname = $"X{pad.PlayerNumber} ";
+							string xname = "X" + pad.PlayerNumber + " ";
 							for (int b = 0; b < pad.NumButtons; b++)
 								HandleButton(xname + pad.ButtonName(b), pad.Pressed(b));
 							foreach (var sv in pad.GetFloats())
@@ -376,7 +392,7 @@ namespace BizHawk.Client.EmuHawk
 						//analyze joysticks
 						foreach (var pad in GamePad.EnumerateDevices())
 						{
-							string jname = $"J{pad.PlayerNumber} ";
+							string jname = "J" + pad.PlayerNumber + " ";
 							for (int b = 0; b < pad.NumButtons; b++)
 								HandleButton(jname + pad.ButtonName(b), pad.Pressed(b));
 							foreach (var sv in pad.GetFloats())
@@ -513,7 +529,7 @@ namespace BizHawk.Client.EmuHawk
 					foreach (var kvp in LastState)
 						if (kvp.Value)
 						{
-							Console.WriteLine($"Unpressing {kvp.Key}");
+							Console.WriteLine("Unpressing " + kvp.Key);
 							UnpressState[kvp.Key] = true;
 						}
 

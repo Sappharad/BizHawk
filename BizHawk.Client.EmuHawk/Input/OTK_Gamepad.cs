@@ -11,6 +11,7 @@ namespace BizHawk.Client.EmuHawk
 		//We're going to use Joystick directly, because it gives us full access to all possible buttons.
 		//And it looks like GamePad itself isn't supported on OpenTK OS X.
 
+		private static readonly object _syncObj = new object();
 		public static List<OTK_GamePad> Devices;
 		private const int MAX_JOYSTICKS = 4; //They don't have a way to query this for some reason. 4 is the minimum promised.
 
@@ -23,13 +24,24 @@ namespace BizHawk.Client.EmuHawk
 				JoystickState jss = Joystick.GetState(i);
 				if (jss.IsConnected)
 				{
-					Console.WriteLine($"joydevice index: {i}"); //OpenTK doesn't expose the GUID, even though it stores it internally...
+					Console.WriteLine(string.Format("joydevice index: {0}", i)); //OpenTK doesn't expose the GUID, even though it stores it internally...
 
 					OTK_GamePad ogp = new OTK_GamePad(i);
 					Devices.Add(ogp);
 				}
 			}
 
+		}
+
+		public static IEnumerable<OTK_GamePad> EnumerateDevices()
+		{
+			lock (_syncObj)
+			{
+				foreach (var device in Devices)
+				{
+					yield return device;
+				}
+			}
 		}
 
 		public static void UpdateAll()
@@ -77,7 +89,8 @@ namespace BizHawk.Client.EmuHawk
 			return state;
 		}
 
-		public string Name { get { return $"Joystick {_stickIdx}"; } }
+		public string Name { get { return "Joystick " + _stickIdx; } }
+		public string ID { get { return $"OTX{_stickIdx}"; } }
 		public Guid Guid { get { return _guid; } }
 
 
@@ -122,17 +135,17 @@ namespace BizHawk.Client.EmuHawk
 			int jb = 1;
 			for (int i = 0; i < 64; i++)
 			{
-				AddItem($"B{jb}", () => state.GetButton(i)==ButtonState.Pressed);
+				AddItem(string.Format("B{0}", jb), () => state.GetButton(i)==ButtonState.Pressed);
 				jb++;
 			}
 
 			jb = 1;
 			foreach (JoystickHat enval in Enum.GetValues(typeof(JoystickHat)))
 			{
-				AddItem($"POV{jb}U", () => state.GetHat(enval).IsUp);
-				AddItem($"POV{jb}D", () => state.GetHat(enval).IsDown);
-				AddItem($"POV{jb}L", () => state.GetHat(enval).IsLeft);
-				AddItem($"POV{jb}R", () => state.GetHat(enval).IsRight);
+				AddItem(string.Format("POV{0}U", jb), () => state.GetHat(enval).IsUp);
+				AddItem(string.Format("POV{0}D", jb), () => state.GetHat(enval).IsDown);
+				AddItem(string.Format("POV{0}L", jb), () => state.GetHat(enval).IsLeft);
+				AddItem(string.Format("POV{0}R", jb), () => state.GetHat(enval).IsRight);
 				jb++;
 			}
 		}

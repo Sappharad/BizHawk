@@ -72,6 +72,10 @@ namespace BizHawk.Client.EmuHawk
 				if (t == typeof(HexView) && OSTailoredCode.CurrentOS != OSTailoredCode.DistinctOS.Windows)
 					continue; // Skip this tool on Unix. It isn't finished and only causes exceptions
 
+				// Skip this tool on linux. It isnt finished and it causes exceptions
+				if (t == typeof(HexView) && BizHawk.Common.PlatformLinkedLibSingleton.RunningOnUnix)
+					continue;
+
 				var instance = Activator.CreateInstance(t);
 
 				var tsb = new ToolStripButton

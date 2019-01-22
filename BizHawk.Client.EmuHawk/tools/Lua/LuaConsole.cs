@@ -58,21 +58,8 @@ namespace BizHawk.Client.EmuHawk
 				if (AskSaveChanges())
 				{
 					SaveColumnInfo(LuaListView, Settings.Columns);
-					
-					GlobalWin.DisplayManager.ClearLuaSurfaces();
-
-					if (GlobalWin.DisplayManager.ClientExtraPadding != Padding.Empty)
-					{
-						GlobalWin.DisplayManager.ClientExtraPadding = new Padding(0);
-						GlobalWin.MainForm.FrameBufferResized();
-					}
-
-					if (GlobalWin.DisplayManager.GameExtraPadding != Padding.Empty)
-					{
-						GlobalWin.DisplayManager.GameExtraPadding = new Padding(0);
-						GlobalWin.MainForm.FrameBufferResized();
-					}
-
+					if (GlobalWin.DisplayManager != null)
+						GlobalWin.DisplayManager.ClearLuaSurfaces();
 					LuaImp.GuiLibrary.DrawFinish();
 					CloseLua();
 				}
@@ -186,15 +173,15 @@ namespace BizHawk.Client.EmuHawk
 			}
 
 			var currentScripts = LuaImp?.ScriptList; // Temp fix for now
-			LuaImp = OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows
-				? (PlatformEmuLuaLibrary) new EmuLuaLibrary(Emulator.ServiceProvider)
-				: (PlatformEmuLuaLibrary) new NotReallyLuaLibrary();
+			LuaImp = PlatformLinkedLibSingleton.RunningOnUnix
+				? (PlatformEmuLuaLibrary) new EmuLuaLibrary(Emulator.ServiceProvider)//NotReallyLuaLibrary()
+				: (PlatformEmuLuaLibrary) new EmuLuaLibrary(Emulator.ServiceProvider);
 			if (currentScripts != null)
 			{
 				LuaImp.ScriptList.AddRange(currentScripts);
 			}
 
-			InputBox.AutoCompleteCustomSource.AddRange(LuaImp.Docs.Select(a => $"{a.Library}.{a.Name}").ToArray());
+			InputBox.AutoCompleteCustomSource.AddRange(LuaImp.Docs.Select(a => a.Library + "." + a.Name).ToArray());
 
 			foreach (var file in runningScripts)
 			{
@@ -254,7 +241,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private void OnChanged(object source, FileSystemEventArgs e)
 		{
-			string message = $"File: {e.FullPath} {e.ChangeType}";
+			string message = "File: " + e.FullPath + " " + e.ChangeType;
 			Invoke(new MethodInvoker(delegate
 			{
 				RefreshScriptMenuItem_Click(null, null);
@@ -451,15 +438,15 @@ namespace BizHawk.Client.EmuHawk
 
 			if (total == 1)
 			{
-				message += $"{total} script ({active} active, {paused} paused)";
+				message += total + " script (" + active + " active, " + paused + " paused)";
 			}
 			else if (total == 0)
 			{
-				message += $"{total} scripts";
+				message += total + " scripts";
 			}
 			else
 			{
-				message += $"{total} scripts ({active} active, {paused} paused)";
+				message += total + " scripts (" + active + " active, " + paused + " paused)";
 			}
 
 			NumberOfScripts.Text = message;
@@ -636,7 +623,7 @@ namespace BizHawk.Client.EmuHawk
 			if (file != null)
 			{
 				LuaImp.ScriptList.SaveSession(file.FullName);
-				OutputMessages.Text = $"{Path.GetFileName(LuaImp.ScriptList.Filename)} saved.";
+				OutputMessages.Text = Path.GetFileName(LuaImp.ScriptList.Filename) + " saved.";
 			}
 		}
 
@@ -769,7 +756,7 @@ namespace BizHawk.Client.EmuHawk
 					SaveSessionAs();
 				}
 
-				OutputMessages.Text = $"{Path.GetFileName(LuaImp.ScriptList.Filename)} saved.";
+				OutputMessages.Text = Path.GetFileName(LuaImp.ScriptList.Filename) + " saved.";
 			}
 		}
 
@@ -911,7 +898,7 @@ namespace BizHawk.Client.EmuHawk
 			}
 			catch (IOException)
 			{
-				ConsoleLog($"Unable to access file {item.Path}");
+				ConsoleLog("Unable to access file " + item.Path);
 			}
 			catch (Exception ex)
 			{
@@ -973,7 +960,7 @@ namespace BizHawk.Client.EmuHawk
 				{
 					InitialDirectory = Path.GetDirectoryName(script.Path),
 					DefaultExt = ".lua",
-					FileName = $"{Path.GetFileNameWithoutExtension(script.Path)} (1)",
+					FileName = Path.GetFileNameWithoutExtension(script.Path) + " (1)",
 					OverwritePrompt = true,
 					Filter = "Lua Scripts (*.lua)|*.lua|All Files (*.*)|*.*"
 				};

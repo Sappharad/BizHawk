@@ -7,6 +7,8 @@ using BizHawk.Client.Common;
 using BizHawk.Client.EmuHawk;
 using System.Diagnostics;
 using System.Threading;
+using AppKit;
+using Foundation;
 
 namespace BizHawk.Client.EmuHawkMacApp
 {
@@ -73,6 +75,9 @@ namespace BizHawk.Client.EmuHawkMacApp
 				var title = mf.Text;
 				//mf.Show();
 				mf.Text = title;
+				//TODO: Menu extractor is working, but the menus are all disabled???
+				/*mf.Shown += (sender, e) => { DoMenuExtraction(mf); };
+				mf.OnPauseChanged += (sender, e) => { RefreshAllMenus(mf); };*/
 				Application.Run(mf);
 
 
@@ -113,5 +118,196 @@ namespace BizHawk.Client.EmuHawkMacApp
 			//return 0 assuming things have gone well, non-zero values could be used as error codes or for scripting purposes
 			return;
 		}
+
+		private static System.Collections.Generic.Dictionary<ToolStripMenuItem, MenuItemAdapter> _menuLookup;
+
+		private static void DoMenuExtraction(Form mainForm)
+		{
+			_menuLookup = new System.Collections.Generic.Dictionary<ToolStripMenuItem, MenuItemAdapter>();
+			ExtractMenus(mainForm.MainMenuStrip);
+			mainForm.MainMenuStrip.Visible = false; //Hide original menu since we extracted it.
+		}
+
+		private static void ExtractMenus(System.Windows.Forms.MenuStrip menus)
+		{
+			for (int i = 0; i < menus.Items.Count; i++)
+			{
+				ToolStripMenuItem item = menus.Items[i] as ToolStripMenuItem;
+				MenuItemAdapter menuOption = new MenuItemAdapter(item);
+				NSMenu dropDown = new NSMenu(CleanMenuString(item.Text));
+				menuOption.Submenu = dropDown;
+				NSApplication.SharedApplication.MainMenu.AddItem(menuOption);
+				_menuLookup.Add(item, menuOption);
+				menuOption.Hidden = !item.Visible;
+				item.VisibleChanged += HandleItemVisibleChanged;
+				menuOption.Enabled = true; //item.Enabled;
+				ExtractSubmenu(item.DropDownItems, dropDown, i == 0); //Skip last 2 options in first menu, redundant exit option
+			}
+		}
+
+		private static void ExtractSubmenu(ToolStripItemCollection subItems, NSMenu destMenu, bool fileMenu)
+		{
+			int max = subItems.Count;
+			if (fileMenu) max -= 2;
+			for (int i = 0; i < max; i++)
+			{
+				ToolStripItem item = subItems[i];
+				if (item is ToolStripMenuItem)
+				{
+					ToolStripMenuItem menuItem = (ToolStripMenuItem)item;
+					MenuItemAdapter translated = new MenuItemAdapter(menuItem);
+					menuItem.CheckedChanged += HandleMenuItemCheckedChanged;
+					menuItem.EnabledChanged += HandleMenuItemEnabledChanged;
+					translated.Action = new ObjCRuntime.Selector("HandleMenu:");
+					translated.State = menuItem.Checked ? NSCellStateValue.On : NSCellStateValue.Off;
+					translated.Enabled = true;
+					if (menuItem.Image != null) translated.Image = ImageToCocoa(menuItem.Image);
+					destMenu.AddItem(translated);
+					_menuLookup.Add(menuItem, translated);
+					if (menuItem.DropDownItems.Count > 0)
+					{
+						NSMenu dropDown = new NSMenu(CleanMenuString(item.Text));
+						translated.Submenu = dropDown;
+						ExecuteDropDownOpened(menuItem);
+						ExtractSubmenu(menuItem.DropDownItems, dropDown, false);
+					}
+				}
+				else if (item is ToolStripSeparator)
+				{
+					destMenu.AddItem(NSMenuItem.SeparatorItem);
+				}
+			}
+		}
+
+		private static void ExecuteDropDownOpened(ToolStripMenuItem item)
+		{
+			var dropDownOpeningKey = typeof(ToolStripDropDownItem).GetField("DropDownOpenedEvent", BindingFlags.Static | BindingFlags.NonPublic);
+			var eventProp = typeof(ToolStripDropDownItem).GetProperty("Events", BindingFlags.Instance | BindingFlags.NonPublic);
+			if (eventProp != null && dropDownOpeningKey != null)
+			{
+				var dropDownOpeningValue = dropDownOpeningKey.GetValue(item);
+				var eventList = eventProp.GetValue(item, null) as System.ComponentModel.EventHandlerList;
+				if (eventList != null)
+				{
+					Delegate ddd = eventList[dropDownOpeningValue];
+					try
+					{
+						if (ddd != null) ddd.DynamicInvoke(null, EventArgs.Empty);
+					}
+					catch (Exception ex)
+					{
+						//throw ex;
+					}
+				}
+			}
+		}
+
+		private static void HandleItemVisibleChanged(object sender, EventArgs e)
+		{
+			if (sender is ToolStripMenuItem && _menuLookup.ContainsKey((ToolStripMenuItem)sender))
+			{
+				MenuItemAdapter translated = _menuLookup[(ToolStripMenuItem)sender];
+				translated.Hidden = !translated.Hidden;
+				//Can't actually look at Visible property because the entire menubar is hidden.
+				//Since the event only gets called when Visible is changed, we can assume it got flipped.
+				if (((ToolStripMenuItem)sender).Text.Equals("&NES"))
+				{
+					//Hack to rebuild menu contents due to changing FDS sub-menu.
+					//At some point, I might want to figure out a better way to do this.
+					RemoveMenuItems(translated);
+					ExtractSubmenu(translated.HostMenu.DropDownItems, translated.Submenu, false);
+				}
+			}
+		}
+
+		private static void RemoveMenuItems(MenuItemAdapter menu)
+		{
+			if (menu.HasSubmenu)
+			{
+				for (int i = (int)(menu.Submenu.Count - 1); i >= 0; i--)
+				{
+					MenuItemAdapter item = menu.Submenu.ItemAt(i) as MenuItemAdapter;
+					if (item != null) //It will be null if it's a separator
+					{
+						RemoveMenuItems(item);
+						if (_menuLookup.ContainsKey(item.HostMenu))
+						{
+							_menuLookup.Remove(item.HostMenu);
+						}
+						item.HostMenu.CheckedChanged -= HandleMenuItemCheckedChanged;
+						item.HostMenu.EnabledChanged -= HandleMenuItemEnabledChanged;
+					}
+					menu.Submenu.RemoveItemAt(i);
+				}
+			}
+		}
+
+		private static void HandleMenuItemEnabledChanged(object sender, EventArgs e)
+		{
+			if (sender is ToolStripMenuItem && _menuLookup.ContainsKey((ToolStripMenuItem)sender))
+			{
+				MenuItemAdapter translated = _menuLookup[(ToolStripMenuItem)sender];
+				translated.Enabled = true; //translated.HostMenu.Enabled;
+			}
+		}
+
+		private static void HandleMenuItemCheckedChanged(object sender, EventArgs e)
+		{
+			if (sender is ToolStripMenuItem && _menuLookup.ContainsKey((ToolStripMenuItem)sender))
+			{
+				MenuItemAdapter translated = _menuLookup[(ToolStripMenuItem)sender];
+				translated.State = translated.HostMenu.Checked ? NSCellStateValue.On : NSCellStateValue.Off;
+			}
+		}
+
+		private static void RefreshAllMenus(Form mainForm)
+		{
+			for (int i = 0; i < mainForm.MainMenuStrip.Items.Count; i++)
+			{
+				ToolStripMenuItem item = mainForm.MainMenuStrip.Items[i] as ToolStripMenuItem;
+				MenuItemAdapter mia = _menuLookup[item];
+				if (mia != null)
+				{
+					RemoveMenuItems(mia);
+					ExtractSubmenu(mia.HostMenu.DropDownItems, mia.Submenu, i == 0);
+				}
+			}
+		}
+
+		private static NSImage ImageToCocoa(System.Drawing.Image input)
+		{
+			System.IO.MemoryStream ms = new System.IO.MemoryStream();
+			input.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+			ms.Position = 0;
+			NSImage img = NSImage.FromStream(ms);
+			img.Size = new CoreGraphics.CGSize(16.0, 16.0); //Some of BizHawk's menu icons are larger, even though WinForms only does 16x16.
+			return img;
+		}
+
+		private static string CleanMenuString(string text)
+		{
+			return text.Replace("&", string.Empty);
+		}
+
+		private class MenuItemAdapter : NSMenuItem
+		{
+			public MenuItemAdapter(ToolStripMenuItem host) : base(CleanMenuString(host.Text))
+			{
+				HostMenu = host;
+			}
+			public ToolStripMenuItem HostMenu { get; set; }
+		}
+
+		[Export("HandleMenu:")]
+		private static void HandleMenu(MenuItemAdapter item)
+		{
+			//_queuedAction = new Action(item.HostMenu.PerformClick);
+		}
+
+		/*[Export("OnAppQuit")]
+		private static void OnQuit()
+		{
+			_mainWinForm.Close();
+		}*/
 	}
 }

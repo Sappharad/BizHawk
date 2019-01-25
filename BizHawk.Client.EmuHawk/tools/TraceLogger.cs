@@ -36,6 +36,9 @@ namespace BizHawk.Client.EmuHawk
 			set { this.Registers.Width = value; }
 		}
 
+		[ConfigPersist]
+		public override bool AutoScroll { get; set; }
+
 		private FileInfo _logFile;
 		private FileInfo LogFile
 		{
@@ -72,6 +75,33 @@ namespace BizHawk.Client.EmuHawk
 			MaxLines = 10000;
 			FileSizeCap = 150; // make 1 frame of tracelog for n64/psx fit in
 			_splitFile = FileSizeCap != 0;
+
+			SetupTraceViewSettings();
+		}
+
+		private void SetupColumns()
+		{
+			TraceView.AllColumns.Clear();
+			TraceView.AddColumn("Disasm", "Disasm", 239, PlatformAgnosticVirtualListView.ListColumn.InputType.Text);
+			TraceView.AddColumn("Registers", "Registers", 357, PlatformAgnosticVirtualListView.ListColumn.InputType.Text);
+		}
+
+		private void SetupTraceViewSettings()
+		{
+			TraceView.MultiSelect = true;
+			TraceView.CellWidthPadding = 3;
+			TraceView.CellHeightPadding = 2;
+			TraceView.ScrollSpeed = 5;
+			TraceView.AllowColumnResize = true;
+			TraceView.AllowColumnReorder = true;
+			TraceView.ColumnHeaderFont = new System.Drawing.Font("Courier New", 8F);
+			TraceView.ColumnHeaderFontColor = System.Drawing.Color.Black;
+			TraceView.ColumnHeaderBackgroundColor = System.Drawing.Color.White;
+			TraceView.ColumnHeaderBackgroundHighlightColor = System.Drawing.Color.LightSteelBlue;
+			TraceView.ColumnHeaderOutlineColor = System.Drawing.Color.White;
+			TraceView.CellFont = new System.Drawing.Font("Courier New", 8F);
+			TraceView.CellFontColor = System.Drawing.Color.Black;
+			TraceView.CellBackgroundColor = System.Drawing.Color.White;
 		}
 
 		public bool UpdateBefore
@@ -94,7 +124,9 @@ namespace BizHawk.Client.EmuHawk
 			text = "";
 			if (index < _instructions.Count)
 			{
-				switch (column)
+				var test = TraceView.AllColumns;
+
+				switch (TraceView.GetOriginalColumnIndex(column))
 				{
 					case 0:
 						text = _instructions[index].Disassembly.TrimEnd();
@@ -111,8 +143,10 @@ namespace BizHawk.Client.EmuHawk
 			ClearList();
 			OpenLogFile.Enabled = false;
 			LoggingEnabled.Checked = false;
+			AutoScrollMenuItem.Checked = AutoScroll;
 			Tracer.Sink = null;
 			SetTracerBoxTitle();
+			SetupColumns();
 		}
 
 		class CallbackSink : ITraceSink
@@ -133,11 +167,13 @@ namespace BizHawk.Client.EmuHawk
 			{
 				if (ToWindowRadio.Checked)
 				{
-					// setting to zero first fixes an exception when scrolling the view
-					// how or why I don't know
-					// it's hidden behind an internal class ListViewNativeItemCollection
-					TraceView.VirtualListSize = 0;
-					TraceView.VirtualListSize = _instructions.Count;		
+					TraceView.VirtualListSize = _instructions.Count;
+					if (GlobalWin.MainForm.EmulatorPaused)
+					{
+						if (AutoScroll && _instructions.Count != 0)
+							TraceView.ScrollToIndex(_instructions.IndexOf(_instructions.Last()));
+						TraceView.Refresh();
+					}						
 				}
 				else
 				{
@@ -152,8 +188,10 @@ namespace BizHawk.Client.EmuHawk
 					//connect tracer to sink for next frame
 					if (ToWindowRadio.Checked)
 					{
-						//update listview with most recent results
-						TraceView.BlazingFast = !GlobalWin.MainForm.EmulatorPaused;
+						if (AutoScroll && _instructions.Count != 0)
+							TraceView.ScrollToIndex(_instructions.IndexOf(_instructions.Last()));
+
+						TraceView.Refresh();
 
 						Tracer.Sink = new CallbackSink()
 						{
@@ -165,8 +203,7 @@ namespace BizHawk.Client.EmuHawk
 								}
 								_instructions.Add(info);
 							}
-						};
-						_instructions.Clear();
+						};						
 					}
 					else
 					{
@@ -178,7 +215,7 @@ namespace BizHawk.Client.EmuHawk
 							putter = (info) =>
 							{
 								//no padding supported. core should be doing this!
-								var data = $"{info.Disassembly} {info.RegisterInfo}";
+								var data = string.Format("{0} {1}", info.Disassembly, info.RegisterInfo);
 								_streamWriter.WriteLine(data);
 								_currentSize += (ulong)data.Length;
 								if (_splitFile)
@@ -219,7 +256,7 @@ namespace BizHawk.Client.EmuHawk
 			foreach (var instruction in _instructions)
 			{
 				//no padding supported. core should be doing this!
-				var data = $"{instruction.Disassembly} {instruction.RegisterInfo}";
+				var data = string.Format("{0} {1}", instruction.Disassembly, instruction.RegisterInfo);
 				_streamWriter.WriteLine(data);
 				_currentSize += (ulong)data.Length;
 				if (_splitFile)
@@ -246,7 +283,7 @@ namespace BizHawk.Client.EmuHawk
 				}
 				else if (_instructions.Any())
 				{
-					TracerBox.Text = $"Trace log - logging - {_instructions.Count} instructions";
+					TracerBox.Text = "Trace log - logging - " + _instructions.Count + " instructions";
 				}
 				else
 				{
@@ -257,7 +294,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				if (_instructions.Any())
 				{
-					TracerBox.Text = $"Trace log - {_instructions.Count} instructions";
+					TracerBox.Text = "Trace log - " + _instructions.Count + " instructions";
 				}
 				else
 				{
@@ -319,7 +356,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				StartLogFile();
 				DumpToDisk();
-				GlobalWin.OSD.AddMessage($"Log dumped to {LogFile.FullName}");
+				GlobalWin.OSD.AddMessage("Log dumped to " + LogFile.FullName);
 				CloseFile();
 			}
 		}
@@ -331,14 +368,17 @@ namespace BizHawk.Client.EmuHawk
 
 		private void CopyMenuItem_Click(object sender, EventArgs e)
 		{
-			var indices = TraceView.SelectedIndices;
+			//var indices = TraceView.SelectedIndices;
+			var indices = TraceView.SelectedRows.ToList();
 
 			if (indices.Count > 0)
 			{
 				var blob = new StringBuilder();
 				foreach (int index in indices)
 				{
-					blob.Append($"{_instructions[index].Disassembly} {_instructions[index].RegisterInfo}\n");
+					blob.Append(string.Format("{0} {1}\n",
+						_instructions[index].Disassembly,
+						_instructions[index].RegisterInfo));
 				}
 				Clipboard.SetDataObject(blob.ToString());
 			}
@@ -391,6 +431,11 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 
+		private void AutoScrollMenuItem_Click(object sender, EventArgs e)
+		{
+			AutoScroll = ((ToolStripMenuItem)sender as ToolStripMenuItem).Checked;
+		}
+
 		#endregion
 
 		#region Dialog and ListView Events
@@ -417,9 +462,8 @@ namespace BizHawk.Client.EmuHawk
 		private void StartLogFile(bool append = false)
 		{
 			var data = Tracer.Header;
-			_streamWriter = new StreamWriter(
-				string.Concat(_baseName, _segmentCount == 0 ? string.Empty : $"_{_segmentCount}", _extension),
-				append);
+			var segment = _segmentCount > 0 ? "_" + _segmentCount.ToString() : "";
+			_streamWriter = new StreamWriter(_baseName + segment + _extension, append);
 			_streamWriter.WriteLine(data);
 			if (append)
 			{

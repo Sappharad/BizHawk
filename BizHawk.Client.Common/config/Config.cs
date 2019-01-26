@@ -171,7 +171,7 @@ namespace BizHawk.Client.Common
 
 		public enum EDispMethod
 		{
-			OpenGL, GdiPlus, SlimDX9
+			OpenGL, GdiPlus, SlimDX9, Vulkan
 		}
 
 		public enum ESoundOutputMethod

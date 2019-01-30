@@ -76,8 +76,8 @@ namespace BizHawk.Client.EmuHawkMacApp
 				//mf.Show();
 				mf.Text = title;
 				//TODO: Menu extractor is working, but the menus are all disabled???
-				/*mf.Shown += (sender, e) => { DoMenuExtraction(mf); };
-				mf.OnPauseChanged += (sender, e) => { RefreshAllMenus(mf); };*/
+				mf.Shown += (sender, e) => { DoMenuExtraction(mf); };
+				mf.OnPauseChanged += (sender, e) => { RefreshAllMenus(mf); };
 				Application.Run(mf);
 
 
@@ -135,12 +135,13 @@ namespace BizHawk.Client.EmuHawkMacApp
 				ToolStripMenuItem item = menus.Items[i] as ToolStripMenuItem;
 				MenuItemAdapter menuOption = new MenuItemAdapter(item);
 				NSMenu dropDown = new NSMenu(CleanMenuString(item.Text));
+				dropDown.AutoEnablesItems = false;
 				menuOption.Submenu = dropDown;
 				NSApplication.SharedApplication.MainMenu.AddItem(menuOption);
 				_menuLookup.Add(item, menuOption);
 				menuOption.Hidden = !item.Visible;
 				item.VisibleChanged += HandleItemVisibleChanged;
-				menuOption.Enabled = true; //item.Enabled;
+				menuOption.Enabled = item.Enabled;
 				ExtractSubmenu(item.DropDownItems, dropDown, i == 0); //Skip last 2 options in first menu, redundant exit option
 			}
 		}
@@ -158,15 +159,20 @@ namespace BizHawk.Client.EmuHawkMacApp
 					MenuItemAdapter translated = new MenuItemAdapter(menuItem);
 					menuItem.CheckedChanged += HandleMenuItemCheckedChanged;
 					menuItem.EnabledChanged += HandleMenuItemEnabledChanged;
-					translated.Action = new ObjCRuntime.Selector("HandleMenu:");
+					translated.Activated += (sender, e) => 
+					{
+						//TODO: Invoke on MainWindow instead, since the emulator appears to run in the background when invoked here.
+						translated.Invoke(new Action(() => menuItem.PerformClick()), 0);
+					};
 					translated.State = menuItem.Checked ? NSCellStateValue.On : NSCellStateValue.Off;
-					translated.Enabled = true;
+					translated.Enabled = item.Enabled;
 					if (menuItem.Image != null) translated.Image = ImageToCocoa(menuItem.Image);
 					destMenu.AddItem(translated);
 					_menuLookup.Add(menuItem, translated);
 					if (menuItem.DropDownItems.Count > 0)
 					{
 						NSMenu dropDown = new NSMenu(CleanMenuString(item.Text));
+						dropDown.AutoEnablesItems = false;
 						translated.Submenu = dropDown;
 						ExecuteDropDownOpened(menuItem);
 						ExtractSubmenu(menuItem.DropDownItems, dropDown, false);
@@ -247,7 +253,7 @@ namespace BizHawk.Client.EmuHawkMacApp
 			if (sender is ToolStripMenuItem && _menuLookup.ContainsKey((ToolStripMenuItem)sender))
 			{
 				MenuItemAdapter translated = _menuLookup[(ToolStripMenuItem)sender];
-				translated.Enabled = true; //translated.HostMenu.Enabled;
+				translated.Enabled = translated.HostMenu.Enabled;
 			}
 		}
 
@@ -296,12 +302,6 @@ namespace BizHawk.Client.EmuHawkMacApp
 				HostMenu = host;
 			}
 			public ToolStripMenuItem HostMenu { get; set; }
-		}
-
-		[Export("HandleMenu:")]
-		private static void HandleMenu(MenuItemAdapter item)
-		{
-			//_queuedAction = new Action(item.HostMenu.PerformClick);
 		}
 
 		/*[Export("OnAppQuit")]

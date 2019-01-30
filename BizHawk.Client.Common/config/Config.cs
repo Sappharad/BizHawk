@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Drawing;
 
-using BizHawk.Common;
 using BizHawk.Emulation.Common;
 
 // ReSharper disable FieldCanBeMadeReadOnly.Global
@@ -342,13 +341,9 @@ namespace BizHawk.Client.Common
 		
 		public int DispPrescale = 1;
 
-		/// <remarks>
-		/// warning: we dont even want to deal with changing this at runtime. but we want it changed here for config purposes. so dont check this variable. check in GlobalWin or something like that.
-		/// force DX for Windows and GDI+ for Unix when a new config is generated
-		/// </remarks>
-		public EDispMethod DispMethod = OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows
-			? EDispMethod.SlimDX9
-			: EDispMethod.GdiPlus;
+		// warning: we dont even want to deal with changing this at runtime. but we want it changed here for config purposes. so dont check this variable. check in GlobalWin or something like that.
+		public EDispMethod DispMethod = !BizHawk.Common.PlatformLinkedLibSingleton.RunningOnUnix
+			? EDispMethod.SlimDX9 : EDispMethod.GdiPlus;	// force GDI+ for linux when config is generated
 
 		public int DispChrome_FrameWindowed = 2;
 		public bool DispChrome_StatusBarWindowed = true;
@@ -376,9 +371,9 @@ namespace BizHawk.Client.Common
 		public int DispCropBottom = 0;
 
 		// Sound options
-		public ESoundOutputMethod SoundOutputMethod = OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows
-			? ESoundOutputMethod.DirectSound
-			: ESoundOutputMethod.OpenAL; // force OpenAL for Unix when config is generated
+		public ESoundOutputMethod SoundOutputMethod = !BizHawk.Common.PlatformLinkedLibSingleton.RunningOnUnix
+			? ESoundOutputMethod.DirectSound : ESoundOutputMethod.OpenAL;	// force OpenAL for linux when config is generated
+
 		public bool SoundEnabled = true;
 		public bool SoundEnabledNormal = true;
 		public bool SoundEnabledRWFF = true;

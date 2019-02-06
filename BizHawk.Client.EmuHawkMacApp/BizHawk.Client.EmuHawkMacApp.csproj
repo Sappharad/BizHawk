@@ -56,6 +56,18 @@
     <LinkMode>None</LinkMode>
     <PlatformTarget>x64</PlatformTarget>
     <AOTMode>None</AOTMode>
+    <CustomCommands>
+      <CustomCommands>
+        <Command>
+          <type>AfterBuild</type>
+          <command>cp -f -R "${ProjectDir}/../output/" "${TargetDir}/BizHawk.app/Contents/MonoBundle/"</command>
+        </Command>
+        <Command>
+          <type>AfterBuild</type>
+          <command>rm "${TargetDir}/BizHawk.app/Contents/MonoBundle/OpenTK.dll"</command>
+        </Command>
+      </CustomCommands>
+    </CustomCommands>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />

@@ -201,6 +201,12 @@ namespace BizHawk.Client.EmuHawk
 				}
 			};
 
+			FormClosed += (o, e) =>
+			{
+				Input.Instance.Shutdown();
+				_windowClosedAndSafeToExitProcess = true;
+			};
+
 			ResizeBegin += (o, e) =>
 			{
 				_inResizeLoop = true;
@@ -2026,12 +2032,24 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 
+		public delegate void BizHawkMessage();
+		private static Queue<BizHawkMessage> _extraMessages = new Queue<BizHawkMessage>();
+		public static void AddMessage(BizHawkMessage msg)
+		{
+			_extraMessages.Enqueue(msg);
+		}
+
 		private static void CheckMessages()
 		{
 			Application.DoEvents();
 			if (ActiveForm != null)
 			{
 				ScreenSaver.ResetTimerPeriodically();
+			}
+			while(_extraMessages.Count > 0)
+			{
+				BizHawkMessage bhm = _extraMessages.Dequeue();
+				bhm();
 			}
 		}
 

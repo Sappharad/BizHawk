@@ -124,6 +124,12 @@ namespace BizHawk.Client.EmuHawk
 			UpdateThread.Start();
 		}
 
+		private bool _abort;
+		public void Shutdown()
+		{
+			_abort = true;
+		}
+
 		public static void Initialize()
 		{
 #if !WINDOWS
@@ -465,6 +471,10 @@ namespace BizHawk.Client.EmuHawk
 
 				//arbitrary selection of polling frequency:
 				Thread.Sleep(10);
+				if (_abort)
+				{
+					return; //End thread
+				}
 			}
 		}
 

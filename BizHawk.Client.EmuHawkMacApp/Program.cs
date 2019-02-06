@@ -78,8 +78,11 @@ namespace BizHawk.Client.EmuHawkMacApp
 				//TODO: Menu extractor is working, but the menus are all disabled???
 				mf.Shown += (sender, e) => { DoMenuExtraction(mf); };
 				mf.OnPauseChanged += (sender, e) => { RefreshAllMenus(mf); };
+				mf.FormClosed += (sender, e) =>
+				{
+					Application.Exit();
+				};
 				Application.Run(mf);
-
 
 				try
 				{
@@ -119,11 +122,13 @@ namespace BizHawk.Client.EmuHawkMacApp
 			return;
 		}
 
-		private static System.Collections.Generic.Dictionary<ToolStripMenuItem, MenuItemAdapter> _menuLookup;
+		private static System.Collections.Generic.Dictionary<ToolStripMenuItem, NSMenuItem> _menuLookup;
+		private static System.Collections.Generic.Dictionary<NSMenuItem, ToolStripMenuItem> _reverseMenuLookup;
 
 		private static void DoMenuExtraction(Form mainForm)
 		{
-			_menuLookup = new System.Collections.Generic.Dictionary<ToolStripMenuItem, MenuItemAdapter>();
+			_menuLookup = new System.Collections.Generic.Dictionary<ToolStripMenuItem, NSMenuItem>();
+			_reverseMenuLookup = new System.Collections.Generic.Dictionary<NSMenuItem, ToolStripMenuItem>();
 			ExtractMenus(mainForm.MainMenuStrip);
 			mainForm.MainMenuStrip.Visible = false; //Hide original menu since we extracted it.
 		}
@@ -133,12 +138,13 @@ namespace BizHawk.Client.EmuHawkMacApp
 			for (int i = 0; i < menus.Items.Count; i++)
 			{
 				ToolStripMenuItem item = menus.Items[i] as ToolStripMenuItem;
-				MenuItemAdapter menuOption = new MenuItemAdapter(item);
+				NSMenuItem menuOption = new NSMenuItem(CleanMenuString(item.Text));
 				NSMenu dropDown = new NSMenu(CleanMenuString(item.Text));
 				dropDown.AutoEnablesItems = false;
 				menuOption.Submenu = dropDown;
 				NSApplication.SharedApplication.MainMenu.AddItem(menuOption);
 				_menuLookup.Add(item, menuOption);
+				_reverseMenuLookup.Add(menuOption, item);
 				menuOption.Hidden = !item.Visible;
 				item.VisibleChanged += HandleItemVisibleChanged;
 				menuOption.Enabled = item.Enabled;
@@ -156,19 +162,19 @@ namespace BizHawk.Client.EmuHawkMacApp
 				if (item is ToolStripMenuItem)
 				{
 					ToolStripMenuItem menuItem = (ToolStripMenuItem)item;
-					MenuItemAdapter translated = new MenuItemAdapter(menuItem);
+					NSMenuItem translated = new NSMenuItem(CleanMenuString(item.Text));
 					menuItem.CheckedChanged += HandleMenuItemCheckedChanged;
 					menuItem.EnabledChanged += HandleMenuItemEnabledChanged;
 					translated.Activated += (sender, e) => 
 					{
-						//TODO: Invoke on MainWindow instead, since the emulator appears to run in the background when invoked here.
-						translated.Invoke(new Action(() => menuItem.PerformClick()), 0);
+						MainForm.AddMessage(menuItem.PerformClick);
 					};
 					translated.State = menuItem.Checked ? NSCellStateValue.On : NSCellStateValue.Off;
 					translated.Enabled = item.Enabled;
 					if (menuItem.Image != null) translated.Image = ImageToCocoa(menuItem.Image);
 					destMenu.AddItem(translated);
 					_menuLookup.Add(menuItem, translated);
+					_reverseMenuLookup.Add(translated, menuItem);
 					if (menuItem.DropDownItems.Count > 0)
 					{
 						NSMenu dropDown = new NSMenu(CleanMenuString(item.Text));
@@ -212,7 +218,7 @@ namespace BizHawk.Client.EmuHawkMacApp
 		{
 			if (sender is ToolStripMenuItem && _menuLookup.ContainsKey((ToolStripMenuItem)sender))
 			{
-				MenuItemAdapter translated = _menuLookup[(ToolStripMenuItem)sender];
+				NSMenuItem translated = _menuLookup[(ToolStripMenuItem)sender];
 				translated.Hidden = !translated.Hidden;
 				//Can't actually look at Visible property because the entire menubar is hidden.
 				//Since the event only gets called when Visible is changed, we can assume it got flipped.
@@ -221,27 +227,32 @@ namespace BizHawk.Client.EmuHawkMacApp
 					//Hack to rebuild menu contents due to changing FDS sub-menu.
 					//At some point, I might want to figure out a better way to do this.
 					RemoveMenuItems(translated);
-					ExtractSubmenu(translated.HostMenu.DropDownItems, translated.Submenu, false);
+					ExtractSubmenu(((ToolStripMenuItem)sender).DropDownItems, translated.Submenu, false);
 				}
 			}
 		}
 
-		private static void RemoveMenuItems(MenuItemAdapter menu)
+		private static void RemoveMenuItems(NSMenuItem menu)
 		{
 			if (menu.HasSubmenu)
 			{
 				for (int i = (int)(menu.Submenu.Count - 1); i >= 0; i--)
 				{
-					MenuItemAdapter item = menu.Submenu.ItemAt(i) as MenuItemAdapter;
+					NSMenuItem item = menu.Submenu.ItemAt(i) as NSMenuItem;
 					if (item != null) //It will be null if it's a separator
 					{
 						RemoveMenuItems(item);
-						if (_menuLookup.ContainsKey(item.HostMenu))
+						if (_reverseMenuLookup.ContainsKey(item))
 						{
-							_menuLookup.Remove(item.HostMenu);
+							var hostMenu = _reverseMenuLookup[item];
+							if (_menuLookup.ContainsKey(hostMenu))
+							{
+								_menuLookup.Remove(hostMenu);
+								_reverseMenuLookup.Remove(item);
+							}
+							hostMenu.CheckedChanged -= HandleMenuItemCheckedChanged;
+							hostMenu.EnabledChanged -= HandleMenuItemEnabledChanged;
 						}
-						item.HostMenu.CheckedChanged -= HandleMenuItemCheckedChanged;
-						item.HostMenu.EnabledChanged -= HandleMenuItemEnabledChanged;
 					}
 					menu.Submenu.RemoveItemAt(i);
 				}
@@ -252,8 +263,8 @@ namespace BizHawk.Client.EmuHawkMacApp
 		{
 			if (sender is ToolStripMenuItem && _menuLookup.ContainsKey((ToolStripMenuItem)sender))
 			{
-				MenuItemAdapter translated = _menuLookup[(ToolStripMenuItem)sender];
-				translated.Enabled = translated.HostMenu.Enabled;
+				NSMenuItem translated = _menuLookup[(ToolStripMenuItem)sender];
+				translated.Enabled = ((ToolStripMenuItem)sender).Enabled;
 			}
 		}
 
@@ -261,8 +272,8 @@ namespace BizHawk.Client.EmuHawkMacApp
 		{
 			if (sender is ToolStripMenuItem && _menuLookup.ContainsKey((ToolStripMenuItem)sender))
 			{
-				MenuItemAdapter translated = _menuLookup[(ToolStripMenuItem)sender];
-				translated.State = translated.HostMenu.Checked ? NSCellStateValue.On : NSCellStateValue.Off;
+				NSMenuItem translated = _menuLookup[(ToolStripMenuItem)sender];
+				translated.State = ((ToolStripMenuItem)sender).Checked ? NSCellStateValue.On : NSCellStateValue.Off;
 			}
 		}
 
@@ -271,11 +282,14 @@ namespace BizHawk.Client.EmuHawkMacApp
 			for (int i = 0; i < mainForm.MainMenuStrip.Items.Count; i++)
 			{
 				ToolStripMenuItem item = mainForm.MainMenuStrip.Items[i] as ToolStripMenuItem;
-				MenuItemAdapter mia = _menuLookup[item];
+				NSMenuItem mia = _menuLookup[item];
 				if (mia != null)
 				{
 					RemoveMenuItems(mia);
-					ExtractSubmenu(mia.HostMenu.DropDownItems, mia.Submenu, i == 0);
+					if (_reverseMenuLookup.ContainsKey(mia))
+					{
+						ExtractSubmenu(_reverseMenuLookup[mia].DropDownItems, mia.Submenu, i == 0);
+					}
 				}
 			}
 		}
@@ -295,14 +309,14 @@ namespace BizHawk.Client.EmuHawkMacApp
 			return text.Replace("&", string.Empty);
 		}
 
-		private class MenuItemAdapter : NSMenuItem
+		/*private class MenuItemAdapter : NSMenuItem
 		{
 			public MenuItemAdapter(ToolStripMenuItem host) : base(CleanMenuString(host.Text))
 			{
 				HostMenu = host;
 			}
 			public ToolStripMenuItem HostMenu { get; set; }
-		}
+		}*/
 
 		/*[Export("OnAppQuit")]
 		private static void OnQuit()

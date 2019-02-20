@@ -6,8 +6,6 @@
 	<string>BizHawk</string>
 	<key>CFBundleIdentifier</key>
 	<string>org.tasvideos.BizHawk</string>
-	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>LSMinimumSystemVersion</key>
@@ -30,5 +28,9 @@
 	<string>Assets.xcassets/AppIcon.appiconset</string>
 	<key>NSRequiresAquaSystemAppearance</key>
 	<true/>
+	<key>CFBundleShortVersionString</key>
+	<string>2.3.0</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.entertainment</string>
 </dict>
 </plist>

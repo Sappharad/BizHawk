@@ -81,6 +81,8 @@ namespace BizHawk.Client.EmuHawkMacApp
 				mf.FormClosed += (sender, e) =>
 				{
 					Application.Exit();
+					//This is supposed to account for threads not exiting cleanly on macOS, but I think mono crashes anyway.
+					NSApplication.SharedApplication.Terminate(NSApplication.SharedApplication);
 				};
 				Application.Run(mf);
 

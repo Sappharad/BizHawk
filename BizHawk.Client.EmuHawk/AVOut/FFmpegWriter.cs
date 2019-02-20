@@ -5,6 +5,7 @@ using System.Text;
 using System.Diagnostics;
 using System.Windows.Forms;
 
+using BizHawk.Common;
 using BizHawk.Client.Common;
 using BizHawk.Common;
 using BizHawk.Emulation.Common;
@@ -86,10 +87,12 @@ namespace BizHawk.Client.EmuHawk
 			try
 			{
 				_ffmpeg = new Process();
-				_ffmpeg.StartInfo.FileName = OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows
-					? Path.Combine(PathManager.GetDllDirectory(), "ffmpeg.exe")
-					: "ffmpeg";
-				_ffmpeg.StartInfo.Arguments = $"-y -f nut -i - {_token.Commandline} \"{_baseName}{(_segment == 0 ? string.Empty : $"_{_segment}")}{_ext}\"";
+				_ffmpeg.StartInfo.FileName = PlatformLinkedLibSingleton.RunningOnUnix
+					? "ffmpeg"
+					: Path.Combine(PathManager.GetDllDirectory(), "ffmpeg.exe");
+
+				string filename = _baseName + (_segment > 0 ? $"_{_segment}" : "") + _ext;
+				_ffmpeg.StartInfo.Arguments = string.Format("-y -f nut -i - {1} \"{0}\"", filename, _token.Commandline);
 				_ffmpeg.StartInfo.CreateNoWindow = true;
 
 				// ffmpeg sends informative display to stderr, and nothing to stdout

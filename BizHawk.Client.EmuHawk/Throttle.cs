@@ -35,7 +35,7 @@ namespace BizHawk.Client.EmuHawk
 			//notably, if we're frame-advancing, we should be paused.
 			if (signal_paused && !signal_continuousFrameAdvancing)
 			{
-				//Console.WriteLine($"THE THING: {signal_paused} {signal_continuousFrameAdvancing}");
+				//Console.WriteLine("THE THING: {0} {1}", signal_paused ,signal_continuousFrameAdvancing);
 				skipNextFrame = false;
 				framesSkipped = 0;
 				framesToSkip = 0;
@@ -160,9 +160,7 @@ namespace BizHawk.Client.EmuHawk
 				return ms;
 			}
 		}
-		static PlatformSpecificSysTimer sysTimer = OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows
-			? (PlatformSpecificSysTimer) new WinSysTimer()
-			: new UnixMonoSysTimer();
+		static PlatformSpecificSysTimer sysTimer = PlatformLinkedLibSingleton.RunningOnUnix ? (PlatformSpecificSysTimer) new UnixMonoSysTimer() : (PlatformSpecificSysTimer) new WinSysTimer();
 		static uint TimeBeginPeriod(uint ms)
 		{
 			return sysTimer.TimeBeginPeriod(ms);
@@ -200,12 +198,12 @@ namespace BizHawk.Client.EmuHawk
 		int pct = -1;
 		public void SetSpeedPercent(int percent)
 		{
-			//Console.WriteLine($"throttle set percent {percent}");
+			//Console.WriteLine("throttle set percent " + percent);
 			if (pct == percent) return;
 			pct = percent;
 			float fraction = percent / 100.0f;
 			desiredfps = (ulong)(core_desiredfps * fraction);
-			//Console.WriteLine($"throttle set desiredfps {desiredfps}");
+			//Console.WriteLine("throttle set desiredfps " + desiredfps);
 			desiredspf = 65536.0f / desiredfps;
 			AutoFrameSkip_IgnorePreviousDelay();
 		}
@@ -364,22 +362,20 @@ namespace BizHawk.Client.EmuHawk
 				int sleepTime = (int)((timePerFrame - elapsedTime) * 1000 / afsfreq);
 				if (sleepTime >= 2 || paused)
 				{
-					switch (OSTailoredCode.CurrentOS)
+					if (PlatformLinkedLibSingleton.RunningOnUnix)
 					{
-						case OSTailoredCode.DistinctOS.Linux: //TODO repro
-						case OSTailoredCode.DistinctOS.macOS:
-							// The actual sleep time on OS X with Mono is generally between the request time
-							// and up to 25% over. So we'll scale the sleep time back to account for that.
-							sleepTime = sleepTime * 4 / 5;
-							break;
-						case OSTailoredCode.DistinctOS.Windows:
-							// Assuming a timer period of 1 ms (i.e. TimeBeginPeriod(1)): The actual sleep time
-							// on Windows XP is generally within a half millisecond either way of the requested
-							// time. The actual sleep time on Windows 8 is generally between the requested time
-							// and up to a millisecond over. So we'll subtract 1 ms from the time to avoid
-							// sleeping longer than desired.
-							sleepTime -= 1;
-							break;
+						// The actual sleep time on OS X with Mono is generally between the request time
+						// and up to 25% over. So we'll scale the sleep time back to account for that.
+						sleepTime = sleepTime * 4 / 5;
+					}
+					else
+					{
+						// Assuming a timer period of 1 ms (i.e. TimeBeginPeriod(1)): The actual sleep time
+						// on Windows XP is generally within a half millisecond either way of the requested
+						// time. The actual sleep time on Windows 8 is generally between the requested time
+						// and up to a millisecond over. So we'll subtract 1 ms from the time to avoid
+						// sleeping longer than desired.
+						sleepTime -= 1;
 					}
 
 					Thread.Sleep(Math.Max(sleepTime, 1));

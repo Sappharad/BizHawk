@@ -37,7 +37,7 @@ namespace BizHawk.Common
 				throw new InvalidOperationException();
 			}
 
-			filename = $"bizdelete-{filename.Remove(0, 4)}";
+			filename = "bizdelete-" + filename.Remove(0, 4);
 			return Path.Combine(dir, filename);
 		}
 
@@ -92,10 +92,8 @@ namespace BizHawk.Common
 						{
 							try
 							{
-								if (OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows)
-									DeleteFileW(fi.FullName); // SHUT. UP. THE. EXCEPTIONS.
-								else
-									fi.Delete();
+								if (PlatformLinkedLibSingleton.RunningOnUnix) fi.Delete();
+								else DeleteFileW(fi.FullName); // SHUT. UP. THE. EXCEPTIONS.
 							}
 							catch
 							{

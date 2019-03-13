@@ -84,10 +84,6 @@
       <HintPath>..\output\dll\nlua\NLua.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="OpenTK, Version=3.0.1.0, Culture=neutral, PublicKeyToken=bad199fe84eb3df4, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\References\OpenTK.dll</HintPath>
-    </Reference>
     <Reference Include="SlimDX">
       <HintPath>..\References\x64\SlimDX.dll</HintPath>
     </Reference>
@@ -104,10 +100,17 @@
     </Reference>
     <Reference Include="System.Data" />
     <Reference Include="System.Deployment" Condition=" '$(OS)' == 'Windows_NT' " />
-    <Reference Include="System.Drawing" />
-    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="WindowsBase" />
+    <Reference Include="System.Drawing">
+      <HintPath>..\BizHawk.Client.EmuHawkMacApp\64bitCocoaWinForms\System.Drawing.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Windows.Forms">
+      <HintPath>..\BizHawk.Client.EmuHawkMacApp\64bitCocoaWinForms\System.Windows.Forms.dll</HintPath>
+    </Reference>
+    <Reference Include="OpenTK3">
+      <HintPath>..\References\OpenTK3.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\BizHawk.Common\OSTailoredCode.cs">

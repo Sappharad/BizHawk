@@ -20,7 +20,7 @@ namespace BizHawk.Client.EmuHawk
 				_dinput = new DirectInput();
 
 				_keyboard = new Keyboard(_dinput);
-				_keyboard.SetCooperativeLevel(GlobalWin.MainForm.Handle, CooperativeLevel.Background | CooperativeLevel.Nonexclusive);
+				//_keyboard.SetCooperativeLevel(GlobalWin.MainForm.Handle, CooperativeLevel.Background | CooperativeLevel.Nonexclusive);
 				_keyboard.Properties.BufferSize = 8;
 			}
 		}

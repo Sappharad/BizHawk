@@ -67,7 +67,7 @@ namespace BizHawk.Bizware.BizwareGL.Drivers.GdiPlus
 			//white is really no color at all
 			if (color.ToArgb() == sd.Color.White.ToArgb())
 			{
-				CurrentImageAttributes.ClearColorMatrix(ColorAdjustType.Bitmap);
+				CurrentImageAttributes.ClearColorMatrix(); //CurrentImageAttributes.ClearColorMatrix(ColorAdjustType.Bitmap);
 				return;
 			}
 

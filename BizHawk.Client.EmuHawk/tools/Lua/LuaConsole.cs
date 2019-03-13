@@ -803,7 +803,7 @@ namespace BizHawk.Client.EmuHawk
 				FileName = !string.IsNullOrWhiteSpace(LuaImp.ScriptList.Filename) ?
 					Path.GetFileNameWithoutExtension(LuaImp.ScriptList.Filename) :
 					Path.GetFileNameWithoutExtension(Global.Game.Name),
-				OverwritePrompt = true,
+				//OverwritePrompt = true,
 				Filter = "Lua Scripts (*.lua)|*.lua|All Files (*.*)|*.*"
 			};
 
@@ -961,7 +961,7 @@ namespace BizHawk.Client.EmuHawk
 					InitialDirectory = Path.GetDirectoryName(script.Path),
 					DefaultExt = ".lua",
 					FileName = Path.GetFileNameWithoutExtension(script.Path) + " (1)",
-					OverwritePrompt = true,
+					//OverwritePrompt = true,
 					Filter = "Lua Scripts (*.lua)|*.lua|All Files (*.*)|*.*"
 				};
 

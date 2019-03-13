@@ -20,8 +20,8 @@ namespace BizHawk.Client.EmuHawk
 				Cleanup();
 
 				_dinput = new DirectInput();
-
-				foreach (DeviceInstance device in _dinput.GetDevices(DeviceClass.GameController, DeviceEnumerationFlags.AttachedOnly))
+				//Commented out just for macOS branch, because joystick.SetCooperativeLevel needs a reference to actual WinForms and not my build of it.
+				/*foreach (DeviceInstance device in _dinput.GetDevices(DeviceClass.GameController, DeviceEnumerationFlags.AttachedOnly))
 				{
 					Console.WriteLine("joydevice: {0} `{1}`", device.InstanceGuid, device.ProductName);
 
@@ -39,7 +39,7 @@ namespace BizHawk.Client.EmuHawk
 
 					GamePad p = new GamePad(device.InstanceName, device.InstanceGuid, joystick, _devices.Count);
 					_devices.Add(p);
-				}
+				}*/
 			}
 		}
 

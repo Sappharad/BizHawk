@@ -182,7 +182,7 @@ namespace BizHawk.Client.EmuHawk
 				InitialDirectory = movieFolderPath,
 				DefaultExt = "." + Global.MovieSession.Movie.PreferredExtension,
 				FileName = RecordBox.Text,
-				OverwritePrompt = false,
+				//OverwritePrompt = false,
 				Filter = "Movie Files (*." + Global.MovieSession.Movie.PreferredExtension + ")|*." + Global.MovieSession.Movie.PreferredExtension + "|All Files|*.*"
 			};
 

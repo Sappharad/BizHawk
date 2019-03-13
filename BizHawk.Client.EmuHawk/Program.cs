@@ -237,7 +237,7 @@ namespace BizHawk.Client.EmuHawk
 
 			try
 			{
-				if (Global.Config.SingleInstanceMode)
+				/*if (Global.Config.SingleInstanceMode)
 				{
 					try
 					{
@@ -248,7 +248,7 @@ namespace BizHawk.Client.EmuHawk
 						// Eat it, MainForm disposed itself and Run attempts to dispose of itself.  Eventually we would want to figure out a way to prevent that, but in the meantime it is harmless, so just eat the error
 					}
 				}
-				else
+				else*/
 				{
 					using (var mf = new MainForm(args))
 					{
@@ -383,7 +383,7 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 
-		public class SingleInstanceController : WindowsFormsApplicationBase
+		/*public class SingleInstanceController : WindowsFormsApplicationBase
 		{
 			readonly string[] cmdArgs;
 			public SingleInstanceController(string[] args)
@@ -412,6 +412,6 @@ namespace BizHawk.Client.EmuHawk
 				MainForm.Text = title;
 				GlobalWin.ExitCode = (MainForm as MainForm).ProgramRunLoop();
 			}
-		}
+		}*/
 	}
 }

@@ -115,7 +115,7 @@ namespace BizHawk.Client.EmuHawk.ToolExtensions
 							tsmiCopyFile.Click += (o, ev) => { System.Windows.Forms.Clipboard.SetFileDropList(lame); };
 							tsdd.Items.Add(tsmiCopyFile);
 
-							var tsmiTest = new ToolStripMenuItem { Text = "&Shell Context Menu" };
+							/*var tsmiTest = new ToolStripMenuItem { Text = "&Shell Context Menu" };
 							tsmiTest.Click += (o, ev) =>
 							{
 								var si = new GongSolutions.Shell.ShellItem(hf.FullPathWithoutMember);
@@ -124,7 +124,7 @@ namespace BizHawk.Client.EmuHawk.ToolExtensions
 								tsddi.Owner.Update();
 								scm.ShowContextMenu(tsddi.Owner, new System.Drawing.Point(0, 0));
 							};
-							tsdd.Items.Add(tsmiTest);
+							tsdd.Items.Add(tsmiTest);*/
 
 							tsdd.Items.Add(new ToolStripSeparator());
 						}

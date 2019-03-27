@@ -416,7 +416,9 @@ namespace BizHawk.Client.EmuHawk
 
 						// analyse moose
 						// other sorts of mouse api (raw input) could easily be added as a separate listing under a different class
-						if (WantingMouseFocus.Contains(System.Windows.Forms.Form.ActiveForm))
+						//Note: Removed macOS here because you can't access ActiveForm on a background thread.
+						//Actually, you're not supposed to do that on Windows either, but it doesn't throw a nasty exception there.
+						if (!OpenTK.Configuration.RunningOnMacOS && WantingMouseFocus.Contains(System.Windows.Forms.Form.ActiveForm))
 						{
 							var P = System.Windows.Forms.Control.MousePosition;
 							if (trackdeltas)

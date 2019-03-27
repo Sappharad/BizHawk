@@ -31,7 +31,7 @@ namespace BizHawk.Client.EmuHawkMacApp
 			try
 			{
 				Global.Config = ConfigService.Load<Config>(iniPath);
-				Global.Config.SoundOutputMethod = Config.ESoundOutputMethod.OpenAL;
+				//Global.Config.SoundOutputMethod = Config.ESoundOutputMethod.OpenAL;
 			}
 			catch (Exception e)
 			{

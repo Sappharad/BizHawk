@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 //put in a different namespace for EXE so we can have an instance of this type (by linking to this file rather than copying it) built-in to the exe
@@ -10,64 +9,38 @@ namespace EXE_PROJECT
 namespace BizHawk.Common
 #endif
 {
-	public sealed class OSTailoredCode
+
+public sealed class PlatformLinkedLibSingleton
 	{
-		/// <remarks>macOS doesn't use PlatformID.MacOSX</remarks>
-		public static readonly DistinctOS CurrentOS = Environment.OSVersion.Platform == PlatformID.Unix
-			? currentIsMacOS() ? DistinctOS.macOS : DistinctOS.Linux
-			: DistinctOS.Windows;
+		public static readonly bool RunningOnUnix = Environment.OSVersion.Platform == PlatformID.Unix || Environment.OSVersion.Platform == PlatformID.MacOSX;
+		public static bool RunningOnMacOS { get { return OpenTK.Configuration.RunningOnMacOS; } }
 
-		private static readonly Lazy<ILinkedLibManager> lazy = new Lazy<ILinkedLibManager>(() =>
-		{
-			switch (CurrentOS)
-			{
-				case DistinctOS.Linux:
-				case DistinctOS.macOS:
-					return new UnixMonoLLManager();
-				case DistinctOS.Windows:
-					return new WindowsLLManager();
-				default:
-					throw new ArgumentOutOfRangeException();
-			}
-		});
+		private static readonly Lazy<PlatformLinkedLibManager> lazy = new Lazy<PlatformLinkedLibManager>(() => RunningOnUnix
+			? (RunningOnMacOS) ? (PlatformLinkedLibManager)new MacLinkedLibManager()
+			: (PlatformLinkedLibManager) new UnixMonoLinkedLibManager()
+			: (PlatformLinkedLibManager) new Win32LinkedLibManager());
 
-		public static ILinkedLibManager LinkedLibManager => lazy.Value;
+		public static PlatformLinkedLibManager LinkedLibManager { get { return lazy.Value; } }
 
-		private static bool currentIsMacOS()
-		{
-			var proc = new Process {
-				StartInfo = new ProcessStartInfo {
-					Arguments = "-s",
-					CreateNoWindow = true,
-					FileName = "uname",
-					RedirectStandardOutput = true,
-					UseShellExecute = false
-				}
-			};
-			proc.Start();
-			if (proc.StandardOutput.EndOfStream) throw new Exception("Can't determine OS (uname wrote nothing to stdout)!");
-			return proc.StandardOutput.ReadLine() == "Darwin";
-		}
+		private PlatformLinkedLibSingleton() {}
 
-		private OSTailoredCode() {}
-
-		public interface ILinkedLibManager
+		public interface PlatformLinkedLibManager
 		{
 			IntPtr LoadPlatformSpecific(string dllToLoad);
 			IntPtr GetProcAddr(IntPtr hModule, string procName);
 			int FreePlatformSpecific(IntPtr hModule);
 		}
 
-		/// <remarks>This class is copied from a tutorial, so don't git blame and then email me expecting insight.</remarks>
-		private class UnixMonoLLManager : ILinkedLibManager
+		public class UnixMonoLinkedLibManager : PlatformLinkedLibManager
 		{
-			private const int RTLD_NOW = 2;
+			// This class is copied from a tutorial, so don't git blame and then email me expecting insight.
+			const int RTLD_NOW = 2;
 			[DllImport("libdl.so.2")]
-			private static extern IntPtr dlopen(string fileName, int flags);
+			private static extern IntPtr dlopen(String fileName, int flags);
 			[DllImport("libdl.so.2")]
 			private static extern IntPtr dlerror();
 			[DllImport("libdl.so.2")]
-			private static extern IntPtr dlsym(IntPtr handle, string symbol);
+			private static extern IntPtr dlsym(IntPtr handle, String symbol);
 			[DllImport("libdl.so.2")]
 			private static extern int dlclose(IntPtr handle);
 			public IntPtr LoadPlatformSpecific(string dllToLoad)
@@ -88,10 +61,40 @@ namespace BizHawk.Common
 			}
 		}
 
-		private class WindowsLLManager : ILinkedLibManager
+		public class MacLinkedLibManager : PlatformLinkedLibManager
+		{
+			// This class is copied from a tutorial, so don't git blame and then email me expecting insight.
+			const int RTLD_NOW = 2;
+			[DllImport("dl")]
+			private static extern IntPtr dlopen(String fileName, int flags);
+			[DllImport("dl")]
+			private static extern IntPtr dlerror();
+			[DllImport("dl")]
+			private static extern IntPtr dlsym(IntPtr handle, String symbol);
+			[DllImport("dl")]
+			private static extern int dlclose(IntPtr handle);
+			public IntPtr LoadPlatformSpecific(string dllToLoad)
+			{
+				return dlopen(dllToLoad, RTLD_NOW);
+			}
+			public IntPtr GetProcAddr(IntPtr hModule, string procName)
+			{
+				dlerror();
+				var res = dlsym(hModule, procName);
+				var errPtr = dlerror();
+				if (errPtr != IntPtr.Zero) throw new InvalidOperationException($"error in dlsym: {Marshal.PtrToStringAnsi(errPtr)}");
+				return res;
+			}
+			public int FreePlatformSpecific(IntPtr hModule)
+			{
+				return dlclose(hModule);
+			}
+		}
+
+		public class Win32LinkedLibManager : PlatformLinkedLibManager
 		{
 			[DllImport("kernel32.dll")]
-			private static extern uint GetLastError();
+			private static extern UInt32 GetLastError();
 			// was annotated `[DllImport("kernel32.dll", BestFitMapping = false, ThrowOnUnmappableChar = true)]` in SevenZip.NativeMethods
 			// param dllToLoad was annotated `[MarshalAs(UnmanagedType.LPStr)]` in SevenZip.NativeMethods
 			[DllImport("kernel32.dll")]
@@ -117,13 +120,6 @@ namespace BizHawk.Common
 			{
 				return FreeLibrary(hModule) ? 1 : 0;
 			}
-		}
-
-		public enum DistinctOS : byte
-		{
-			Linux,
-			macOS,
-			Windows
 		}
 	}
 }

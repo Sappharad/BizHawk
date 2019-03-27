@@ -159,9 +159,10 @@ namespace BizHawk.Client.EmuHawk
 
 			Database.LoadDatabase(Path.Combine(PathManager.GetExeDirectoryAbsolute(), "gamedb", "gamedb.txt"));
 
-			CGC.CGCBinPath = !PlatformLinkedLibSingleton.RunningOnUnix 
+			CGC.CGCBinPath = !PlatformLinkedLibSingleton.RunningOnUnix
 				? Path.Combine(PathManager.GetDllDirectory(), "cgc.exe")
-				: "cgc";	// mono requires 'nvidia-cg-toolkit' dep (https://developer.nvidia.com/cg-toolkit-download)
+				: (OpenTK.Configuration.RunningOnMacOS ? Path.Combine(PathManager.GetDllDirectory(), "cgc_osx")
+				 : "cgc"); // unix requires 'nvidia-cg-toolkit' dep (https://developer.nvidia.com/cg-toolkit-download)
 
 			PresentationPanel = new PresentationPanel();
 			PresentationPanel.GraphicsControl.MainWindow = true;
@@ -640,7 +641,7 @@ namespace BizHawk.Client.EmuHawk
 		public bool AllowInput(bool yieldAlt)
 		{
 			// the main form gets input
-			if (ActiveForm == this)
+			if (OpenTK.Configuration.RunningOnMacOS || ActiveForm == this)
 			{
 				return true;
 			}

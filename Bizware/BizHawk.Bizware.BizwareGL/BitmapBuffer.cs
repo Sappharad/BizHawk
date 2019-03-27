@@ -366,11 +366,12 @@ namespace BizHawk.Bizware.BizwareGL
 					int width = bmp.Width;
 					int height = bmp.Height;
 					InitSize(width, height);
-					BitmapData bmpdata = bmp.LockBits(new sd.Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+					//TODO: The native System.Drawing wrapper I'm using on macOS does not support PixelFormat.32bppArgb. 
+					/*BitmapData bmpdata = bmp.LockBits(new sd.Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
 					int* ptr = (int*)bmpdata.Scan0;
 					int stride = bmpdata.Stride / 4;
 					LoadFrom(width, stride, height, (byte*)ptr, options);
-					bmp.UnlockBits(bmpdata);
+					bmp.UnlockBits(bmpdata);*/
 					needsPad = false;
 				}
 			}

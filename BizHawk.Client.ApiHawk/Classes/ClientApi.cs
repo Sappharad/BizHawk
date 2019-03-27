@@ -67,7 +67,7 @@ namespace BizHawk.Client.ApiHawk
 		/// </summary>
 		static ClientApi()
 		{
-			clientAssembly = Assembly.GetEntryAssembly();
+			clientAssembly = Assembly.GetCallingAssembly(); //On macOS we wrap the executing assembly, so use calling instead.
 			clientMainFormInstance = clientAssembly.GetType("BizHawk.Client.EmuHawk.GlobalWin").GetField("MainForm").GetValue(null);
 			mainFormClass = clientAssembly.GetType("BizHawk.Client.EmuHawk.MainForm");
 		}

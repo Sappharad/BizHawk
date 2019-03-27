@@ -12,6 +12,10 @@ namespace BizHawk.Common.BizInvoke
 
 		public DynamicLibraryImportResolver(string dllName)
 		{
+			if (PlatformLinkedLibSingleton.RunningOnMacOS && dllName.IndexOf('.') > 0)
+			{
+				dllName = dllName.Substring(0, dllName.IndexOf('.')) + ".dylib";
+			}
 			ResolveFilePath(ref dllName);
 			_p = libLoader.LoadPlatformSpecific(dllName);
 			if (_p == IntPtr.Zero) throw new InvalidOperationException($"null pointer returned by {nameof(libLoader.LoadPlatformSpecific)}");

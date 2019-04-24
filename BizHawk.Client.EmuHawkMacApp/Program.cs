@@ -31,7 +31,7 @@ namespace BizHawk.Client.EmuHawkMacApp
 			try
 			{
 				Global.Config = ConfigService.Load<Config>(iniPath);
-				//Global.Config.SoundOutputMethod = Config.ESoundOutputMethod.OpenAL;
+				Global.Config.SoundOutputMethod = Config.ESoundOutputMethod.OpenAL;
 			}
 			catch (Exception e)
 			{
@@ -73,7 +73,6 @@ namespace BizHawk.Client.EmuHawkMacApp
 			{
 				var mf = new MainForm(args);
 				var title = mf.Text;
-				//mf.Show();
 				mf.Text = title;
 				//TODO: Menu extractor is working, but the menus are all disabled???
 				mf.Shown += (sender, e) => { DoMenuExtraction(mf); };
@@ -84,11 +83,11 @@ namespace BizHawk.Client.EmuHawkMacApp
 					//This is supposed to account for threads not exiting cleanly on macOS, but I think mono crashes anyway.
 					NSApplication.SharedApplication.Terminate(NSApplication.SharedApplication);
 				};
-				Application.Run(mf);
 
 				try
 				{
-					//GlobalWin.ExitCode = mf.ProgramRunLoop();
+					mf.Show();
+					GlobalWin.ExitCode = mf.ProgramRunLoop();
 				}
 				catch (Exception e) when (!Debugger.IsAttached && Global.MovieSession.Movie.IsActive)
 				{

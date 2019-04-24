@@ -21,7 +21,8 @@ namespace BizHawk.Client.EmuHawk
 		public OpenALSoundOutput(Sound sound)
 		{
 			_sound = sound;
-			string deviceName = GetDeviceNames().FirstOrDefault(n => n == Global.Config.SoundDevice);
+			var devices = GetDeviceNames();
+			string deviceName = devices.FirstOrDefault(n => n == Global.Config.SoundDevice);
 			_context = new AudioContext(deviceName, Sound.SampleRate);
 		}
 

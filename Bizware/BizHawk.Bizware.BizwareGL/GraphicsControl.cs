@@ -10,6 +10,7 @@ namespace BizHawk.Bizware.BizwareGL
 	/// </summary>
 	public class GraphicsControl : UserControl
 	{
+		private bool _added;
 		public GraphicsControl(IGL owner)
 		{
 			IGL = owner;
@@ -26,7 +27,7 @@ namespace BizHawk.Bizware.BizwareGL
 			IGC = owner.Internal_CreateGraphicsControl();
 			Managed = IGC as Control;
 			Managed.Dock = DockStyle.Fill;
-			Controls.Add(Managed);
+			_added = false;
 
 			//pass through these events to the form. I tried really hard to find a better way, but there is none.
 			//(dont use HTTRANSPARENT, it isnt portable, I would assume)
@@ -49,6 +50,17 @@ namespace BizHawk.Bizware.BizwareGL
 		void GraphicsControl_Paint(object sender, PaintEventArgs e)
 		{
 			OnPaint(e);
+		}
+
+		protected override void OnLayout(LayoutEventArgs e)
+		{
+			base.OnLayout(e);
+			if (!_added)
+			{
+				Controls.Add(Managed);
+				_added = true;
+				//Defferred until first layout so macOS can use the window handle for its GL Context
+			}
 		}
 
 		public readonly IGL IGL;

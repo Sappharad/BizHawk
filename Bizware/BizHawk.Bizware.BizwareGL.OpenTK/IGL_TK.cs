@@ -644,10 +644,12 @@ namespace BizHawk.Bizware.BizwareGL.Drivers.OpenTK
 			return ret;
 		}
 
+		public static int ViewportScale = 1;
+
 		public void SetViewport(int x, int y, int width, int height)
 		{
-			GL.Viewport(x, y, width, height);
-			GL.Scissor(x, y, width, height); //hack for mupen[rice]+intel: at least the rice plugin leaves the scissor rectangle scrambled, and we're trying to run it in the main graphics context for intel
+			GL.Viewport(x, y, width * ViewportScale, height * ViewportScale);
+			GL.Scissor(x, y, width * ViewportScale, height * ViewportScale); //hack for mupen[rice]+intel: at least the rice plugin leaves the scissor rectangle scrambled, and we're trying to run it in the main graphics context for intel
 			//BUT ALSO: new specifications.. viewport+scissor make sense together
 		}
 

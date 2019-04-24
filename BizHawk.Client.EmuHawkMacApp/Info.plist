@@ -27,7 +27,7 @@
 	<key>XSAppIconAssets</key>
 	<string>Assets.xcassets/AppIcon.appiconset</string>
 	<key>NSRequiresAquaSystemAppearance</key>
-	<true/>
+	<false/>
 	<key>CFBundleShortVersionString</key>
 	<string>2.3.0</string>
 	<key>LSApplicationCategoryType</key>

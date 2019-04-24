@@ -18,7 +18,7 @@ namespace BizHawk.Client.EmuHawkMacApp
 		{
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
-			//Bizware.BizwareGL.Drivers.OpenTK.IGL_TK.NativeViewportScale = (int)AppKit.NSScreen.MainScreen.BackingScaleFactor;
+			Bizware.BizwareGL.Drivers.OpenTK.IGL_TK.ViewportScale = (int)NSScreen.MainScreen.BackingScaleFactor;
 			//Note: If you have multiple monitors with different scale factors, this won't work. Known limitation.
 
 			//BizHawk.Common.TempFileCleaner.Start();
@@ -74,7 +74,6 @@ namespace BizHawk.Client.EmuHawkMacApp
 				var mf = new MainForm(args);
 				var title = mf.Text;
 				mf.Text = title;
-				//TODO: Menu extractor is working, but the menus are all disabled???
 				mf.Shown += (sender, e) => { DoMenuExtraction(mf); };
 				mf.OnPauseChanged += (sender, e) => { RefreshAllMenus(mf); };
 				mf.FormClosed += (sender, e) =>

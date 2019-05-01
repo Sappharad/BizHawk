@@ -79,3 +79,6 @@ waterbox/**/*.wbx.in
 mono_crash*
 
 .idea
+
+psx/octoshock/bizhawk/octoshock.xcodeproj/project.xcworkspace/xcuserdata
+psx/octoshock/bizhawk/octoshock.xcodeproj/xcuserdata

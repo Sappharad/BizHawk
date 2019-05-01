@@ -1,6 +1,7 @@
 #pragma once
-
+#if !__APPLE__
 #include <intrin.h>
+#endif
 
 //
 // Result is defined for all possible inputs(including 0).

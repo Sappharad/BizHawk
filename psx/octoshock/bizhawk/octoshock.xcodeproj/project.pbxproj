@@ -18,7 +18,6 @@
 		9E11BE631A41204F00CC7F6B /* emuware.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9E11BDF81A41204F00CC7F6B /* emuware.cpp */; };
 		9E11BE641A41204F00CC7F6B /* emuware.h in Headers */ = {isa = PBXBuildFile; fileRef = 9E11BDF91A41204F00CC7F6B /* emuware.h */; };
 		9E11BE651A41204F00CC7F6B /* EW_state.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9E11BDFA1A41204F00CC7F6B /* EW_state.cpp */; };
-		9E11BE661A41204F00CC7F6B /* EW_state.h in Headers */ = {isa = PBXBuildFile; fileRef = 9E11BDFB1A41204F00CC7F6B /* EW_state.h */; };
 		9E11BE691A41204F00CC7F6B /* PACKED.h in Headers */ = {isa = PBXBuildFile; fileRef = 9E11BE001A41204F00CC7F6B /* PACKED.h */; };
 		9E11BE6A1A41204F00CC7F6B /* PACKED_END.h in Headers */ = {isa = PBXBuildFile; fileRef = 9E11BE011A41204F00CC7F6B /* PACKED_END.h */; };
 		9E11BE6B1A41204F00CC7F6B /* endian.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9E11BE021A41204F00CC7F6B /* endian.cpp */; };
@@ -89,6 +88,7 @@
 		9E11BEB41A41204F00CC7F6B /* surface.h in Headers */ = {isa = PBXBuildFile; fileRef = 9E11BE501A41204F00CC7F6B /* surface.h */; };
 		9E11BEB81A41213D00CC7F6B /* dvdisaster.h in Headers */ = {isa = PBXBuildFile; fileRef = 9E11BEB71A41213D00CC7F6B /* dvdisaster.h */; };
 		9E11BEBA1A41215900CC7F6B /* SimpleFIFO.h in Headers */ = {isa = PBXBuildFile; fileRef = 9E11BEB91A41215900CC7F6B /* SimpleFIFO.h */; };
+		9E7CC79322794329000D9569 /* EW_state.h in Headers */ = {isa = PBXBuildFile; fileRef = 9E11BDFB1A41204F00CC7F6B /* EW_state.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -343,7 +343,6 @@
 				9E11BE6A1A41204F00CC7F6B /* PACKED_END.h in Headers */,
 				9E11BE771A41204F00CC7F6B /* octoshock.h in Headers */,
 				9E11BE691A41204F00CC7F6B /* PACKED.h in Headers */,
-				9E11BE661A41204F00CC7F6B /* EW_state.h in Headers */,
 				9E11BEB81A41213D00CC7F6B /* dvdisaster.h in Headers */,
 				9E11BEAA1A41204F00CC7F6B /* spu.h in Headers */,
 				9E11BEB21A41204F00CC7F6B /* Deinterlacer.h in Headers */,
@@ -357,6 +356,7 @@
 				9E11BE931A41204F00CC7F6B /* gamepad.h in Headers */,
 				9E11BE9B1A41204F00CC7F6B /* mouse.h in Headers */,
 				9E11BEBA1A41215900CC7F6B /* SimpleFIFO.h in Headers */,
+				9E7CC79322794329000D9569 /* EW_state.h in Headers */,
 				9E11BE581A41204F00CC7F6B /* CDUtility.h in Headers */,
 				9E11BE791A41204F00CC7F6B /* cdc.h in Headers */,
 				9E11BE7B1A41204F00CC7F6B /* cpu.h in Headers */,
@@ -404,7 +404,7 @@
 		9E11BDD71A411DA300CC7F6B /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0610;
+				LastUpgradeCheck = 1020;
 				ORGANIZATIONNAME = bizhawk;
 				TargetAttributes = {
 					9E11BDDE1A411DA300CC7F6B = {
@@ -414,10 +414,11 @@
 			};
 			buildConfigurationList = 9E11BDDA1A411DA300CC7F6B /* Build configuration list for PBXProject "octoshock" */;
 			compatibilityVersion = "Xcode 3.2";
-			developmentRegion = English;
+			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				Base,
 			);
 			mainGroup = 9E11BDD61A411DA300CC7F6B;
 			productRefGroup = 9E11BDE01A411DA300CC7F6B /* Products */;
@@ -487,9 +488,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
-				CLANG_CXX_LIBRARY = "libstdc++";
+				CLANG_CXX_LIBRARY = "compiler-default";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
@@ -538,9 +538,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
-				CLANG_CXX_LIBRARY = "libstdc++";
+				CLANG_CXX_LIBRARY = "compiler-default";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
@@ -581,11 +580,16 @@
 		9E11BDE41A411DA300CC7F6B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_CXX_LIBRARY = "libc++";
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				EXECUTABLE_PREFIX = lib;
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(OTHER_CFLAGS)",
+					"-fdeclspec",
+				);
+				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -593,11 +597,16 @@
 		9E11BDE51A411DA300CC7F6B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
+				CLANG_CXX_LIBRARY = "libc++";
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				EXECUTABLE_PREFIX = lib;
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(OTHER_CFLAGS)",
+					"-fdeclspec",
+				);
+				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;

@@ -15,6 +15,11 @@ namespace BizHawk.Client.Common
 			using (Form form = new Form())
 			{
 				form.AutoScaleMode = autoScaleMode;
+				if(form.CurrentAutoScaleDimensions.Width < 1.0 || form.CurrentAutoScaleDimensions.Height < 1.0)
+				{
+					//On macOS Cocoa WinForms wrapper CurrentAutoScaleDimensions returns 0x0. Scale is handled by the OS anyway.
+					return _autoScaleBaseSize;
+				}
 				return form.CurrentAutoScaleDimensions;
 			}
 		}

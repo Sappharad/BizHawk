@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Runtime.InteropServices;
 
 using BizHawk.Common;
@@ -12,6 +13,10 @@ namespace BizHawk.Common.BizInvoke
 
 		public DynamicLibraryImportResolver(string dllName)
 		{
+			if(OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.macOS)
+			{
+				dllName = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), dllName);
+			}
 			_p = libLoader.LoadPlatformSpecific(dllName);
 			if (_p == IntPtr.Zero) throw new InvalidOperationException($"null pointer returned by {nameof(libLoader.LoadPlatformSpecific)}");
 		}

@@ -20,8 +20,9 @@ namespace BizHawk.Common
 			switch (CurrentOS)
 			{
 				case DistinctOS.Linux:
-				case DistinctOS.macOS:
 					return new UnixMonoLLManager();
+				case DistinctOS.macOS:
+					return new MacOSLLManager();
 				case DistinctOS.Windows:
 					return new WindowsLLManager();
 				default:
@@ -49,6 +50,30 @@ namespace BizHawk.Common
 			[DllImport("libdl.so.2")]
 			private static extern IntPtr dlsym(IntPtr handle, string symbol);
 			[DllImport("libdl.so.2")]
+			private static extern int dlclose(IntPtr handle);
+
+			public IntPtr LoadPlatformSpecific(string dllToLoad) => dlopen(dllToLoad, RTLD_NOW);
+			public IntPtr GetProcAddr(IntPtr hModule, string procName)
+			{
+				dlerror();
+				var res = dlsym(hModule, procName);
+				var errPtr = dlerror();
+				if (errPtr != IntPtr.Zero) throw new InvalidOperationException($"error in dlsym: {Marshal.PtrToStringAnsi(errPtr)}");
+				return res;
+			}
+			public int FreePlatformSpecific(IntPtr hModule) => dlclose(hModule);
+		}
+
+		private class MacOSLLManager : ILinkedLibManager
+		{
+			private const int RTLD_NOW = 2;
+			[DllImport("libdl.dylib")]
+			private static extern IntPtr dlopen(string fileName, int flags);
+			[DllImport("libdl.dylib")]
+			private static extern IntPtr dlerror();
+			[DllImport("libdl.dylib")]
+			private static extern IntPtr dlsym(IntPtr handle, string symbol);
+			[DllImport("libdl.dylib")]
 			private static extern int dlclose(IntPtr handle);
 
 			public IntPtr LoadPlatformSpecific(string dllToLoad) => dlopen(dllToLoad, RTLD_NOW);

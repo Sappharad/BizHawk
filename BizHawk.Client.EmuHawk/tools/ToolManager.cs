@@ -153,7 +153,7 @@ namespace BizHawk.Client.EmuHawk
 			}
 
 			newTool.Restart();
-			if (BizHawk.Common.PlatformLinkedLibSingleton.RunningOnUnix)
+			if (OSTailoredCode.CurrentOS != OSTailoredCode.DistinctOS.Windows)
 			{
 				if (newTool.GetType() == typeof(RamSearch))
 				{

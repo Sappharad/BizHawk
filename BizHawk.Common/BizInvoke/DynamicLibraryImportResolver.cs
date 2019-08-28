@@ -12,56 +12,8 @@ namespace BizHawk.Common.BizInvoke
 
 		public DynamicLibraryImportResolver(string dllName)
 		{
-			if (PlatformLinkedLibSingleton.RunningOnMacOS && dllName.IndexOf('.') > 0)
-			{
-				dllName = dllName.Substring(0, dllName.IndexOf('.')) + ".dylib";
-			}
-			ResolveFilePath(ref dllName);
 			_p = libLoader.LoadPlatformSpecific(dllName);
 			if (_p == IntPtr.Zero) throw new InvalidOperationException($"null pointer returned by {nameof(libLoader.LoadPlatformSpecific)}");
-		}
-
-		private string[] RelativeSearchPaths = new string[]
-		{
-			"/",
-			"/dll/"			
-		};
-
-		private string[] AbsoluteSearchPaths = new string[]
-		{
-			"/usr/lib/",
-			"/usr/lib/bizhawk/"
-		};
-
-		private void ResolveFilePath(ref string dllName)
-		{
-			if (PlatformLinkedLibSingleton.RunningOnUnix && !dllName.Contains("/"))
-			{
-				// not an absolute path and we are on linux
-				// this is needed to actually find the DLL properly
-				string currDir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase).Replace("file:", "");
-				string dll = dllName;
-
-				foreach (var p in AbsoluteSearchPaths)
-				{
-					dll = p + dllName;
-					if (System.IO.File.Exists(dll))
-					{
-						dllName = dll;
-						return;
-					}
-				}
-
-				foreach (var p in RelativeSearchPaths)
-				{
-					dll = currDir + p + dllName;
-					if (System.IO.File.Exists(dll))
-					{
-						dllName = dll;
-						return;
-					}
-				}
-			}
 		}
 
 		public IntPtr Resolve(string entryPoint)

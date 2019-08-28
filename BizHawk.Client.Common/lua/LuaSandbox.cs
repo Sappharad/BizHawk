@@ -42,7 +42,7 @@ namespace BizHawk.Client.Common
 
 			// WARNING: setting the current directory is SLOW!!! security checks for some reason.
 			// so we're bypassing it with windows hacks
-			if (!BizHawk.Common.PlatformLinkedLibSingleton.RunningOnUnix)
+			if (BizHawk.Common.OSTailoredCode.CurrentOS == BizHawk.Common.OSTailoredCode.DistinctOS.Windows)
 			{
 				fixed (byte* pstr = &System.Text.Encoding.Unicode.GetBytes(target + "\0")[0])
 					return SetCurrentDirectoryW(pstr);
@@ -67,7 +67,7 @@ namespace BizHawk.Client.Common
 			// .NET DOES A SECURITY CHECK ON THE DIRECTORY WE JUST RETRIEVED
 			// AS IF ASKING FOR THE CURRENT DIRECTORY IS EQUIVALENT TO TRYING TO ACCESS IT
 			// SCREW YOU
-			if (!BizHawk.Common.PlatformLinkedLibSingleton.RunningOnUnix)
+			if (BizHawk.Common.OSTailoredCode.CurrentOS == BizHawk.Common.OSTailoredCode.DistinctOS.Windows)
 			{
 				var buf = new byte[32768];
 				fixed (byte* pBuf = &buf[0])

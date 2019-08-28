@@ -26,7 +26,7 @@ namespace BizHawk.Client.EmuHawk
 			cbEnableRWFF.Checked = Global.Config.SoundEnabledRWFF;
 			cbMuteFrameAdvance.Checked = Global.Config.MuteFrameAdvance;
 
-			if (PlatformLinkedLibSingleton.RunningOnUnix)
+			if (OSTailoredCode.CurrentOS != OSTailoredCode.DistinctOS.Windows)
 			{
 				rbOutputMethodDirectSound.Enabled = false;
 				rbOutputMethodXAudio2.Enabled = false;
@@ -88,7 +88,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			IEnumerable<string> deviceNames = Enumerable.Empty<string>();
 
-			if (!PlatformLinkedLibSingleton.RunningOnUnix)
+			if (OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows)
 			{
 				if (rbOutputMethodDirectSound.Checked) deviceNames = DirectSoundSoundOutput.GetDeviceNames();
 				if (rbOutputMethodXAudio2.Checked) deviceNames = XAudio2SoundOutput.GetDeviceNames();

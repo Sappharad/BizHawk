@@ -221,7 +221,7 @@ namespace BizHawk.Client.EmuHawk
 			DialogResult result = new DialogResult();
 			string selectedPath = "";
 
-			if (!BizHawk.Common.PlatformLinkedLibSingleton.RunningOnUnix)
+			if (BizHawk.Common.OSTailoredCode.CurrentOS == BizHawk.Common.OSTailoredCode.DistinctOS.Windows)
 			{
 				var f = new FolderBrowserEx
 				{

@@ -160,7 +160,7 @@ namespace BizHawk.Client.EmuHawk
 				return ms;
 			}
 		}
-		static PlatformSpecificSysTimer sysTimer = PlatformLinkedLibSingleton.RunningOnUnix ? (PlatformSpecificSysTimer) new UnixMonoSysTimer() : (PlatformSpecificSysTimer) new WinSysTimer();
+		static PlatformSpecificSysTimer sysTimer = OSTailoredCode.CurrentOS != OSTailoredCode.DistinctOS.Windows ? (PlatformSpecificSysTimer) new UnixMonoSysTimer() : (PlatformSpecificSysTimer) new WinSysTimer();
 		static uint TimeBeginPeriod(uint ms)
 		{
 			return sysTimer.TimeBeginPeriod(ms);
@@ -362,7 +362,7 @@ namespace BizHawk.Client.EmuHawk
 				int sleepTime = (int)((timePerFrame - elapsedTime) * 1000 / afsfreq);
 				if (sleepTime >= 2 || paused)
 				{
-					if (PlatformLinkedLibSingleton.RunningOnUnix)
+					if (OSTailoredCode.CurrentOS != OSTailoredCode.DistinctOS.Windows)
 					{
 						// The actual sleep time on OS X with Mono is generally between the request time
 						// and up to 25% over. So we'll scale the sleep time back to account for that.

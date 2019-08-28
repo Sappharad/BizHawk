@@ -159,7 +159,7 @@ namespace BizHawk.Client.EmuHawk
 
 			Database.LoadDatabase(Path.Combine(PathManager.GetExeDirectoryAbsolute(), "gamedb", "gamedb.txt"));
 
-			CGC.CGCBinPath = !PlatformLinkedLibSingleton.RunningOnUnix
+			CGC.CGCBinPath = OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows
 				? Path.Combine(PathManager.GetDllDirectory(), "cgc.exe")
 				: (OpenTK.Configuration.RunningOnMacOS ? Path.Combine(PathManager.GetDllDirectory(), "cgc_osx")
 				 : "cgc"); // unix requires 'nvidia-cg-toolkit' dep (https://developer.nvidia.com/cg-toolkit-download)
@@ -1081,7 +1081,7 @@ namespace BizHawk.Client.EmuHawk
 				// (this could be determined with more work; other side affects of the fullscreen mode include: corrupted taskbar, no modal boxes on top of GL control, no screenshots)
 				// At any rate, we can solve this by adding a 1px black border around the GL control
 				// Please note: It is important to do this before resizing things, otherwise momentarily a GL control without WS_BORDER will be at the magic dimensions and cause the flakeout
-				if (!PlatformLinkedLibSingleton.RunningOnUnix && Global.Config.DispFullscreenHacks && Global.Config.DispMethod == Config.EDispMethod.OpenGL)
+				if (OSTailoredCode.CurrentOS != OSTailoredCode.DistinctOS.Windows && Global.Config.DispFullscreenHacks && Global.Config.DispMethod == Config.EDispMethod.OpenGL)
 				{
 					//ATTENTION: this causes the statusbar to not work well, since the backcolor is now set to black instead of SystemColors.Control.
 					//It seems that some statusbar elements composite with the backcolor.
@@ -1108,7 +1108,7 @@ namespace BizHawk.Client.EmuHawk
 
 				WindowState = FormWindowState.Normal;
 
-				if (!PlatformLinkedLibSingleton.RunningOnUnix)
+				if (OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows)
 				{
 					// do this even if DispFullscreenHacks arent enabled, to restore it in case it changed underneath us or something
 					Padding = new Padding(0);
@@ -1438,7 +1438,7 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 
-		private void SetWindowText()
+		internal void SetWindowText()
 		{
 			string str = "";
 
@@ -2022,7 +2022,7 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 
-		private BitmapBuffer MakeScreenshotImage()
+		internal BitmapBuffer MakeScreenshotImage()
 		{
 			return GlobalWin.DisplayManager.RenderVideoProvider(_currentVideoProvider);
 		}
@@ -2086,7 +2086,7 @@ namespace BizHawk.Client.EmuHawk
 		// sends an alt+mnemonic combination
 		private void SendAltKeyChar(char c)
 		{
-			if (PlatformLinkedLibSingleton.RunningOnUnix) {} // no mnemonics for you
+			if (OSTailoredCode.CurrentOS != OSTailoredCode.DistinctOS.Windows) {} // no mnemonics for you
 			else typeof(ToolStrip).InvokeMember("ProcessMnemonicInternal", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.InvokeMethod | System.Reflection.BindingFlags.Instance, null, MainformMenu, new object[] { c });
 		}
 
@@ -3842,7 +3842,7 @@ namespace BizHawk.Client.EmuHawk
 						}
 					}
 
-					ClientApi.OnRomLoaded();
+					ClientApi.OnRomLoaded(Emulator);
 					return true;
 				}
 				else
@@ -3853,7 +3853,7 @@ namespace BizHawk.Client.EmuHawk
 					// The ROM has been loaded by a recursive invocation of the LoadROM method.
 					if (!(Emulator is NullEmulator))
 					{
-						ClientApi.OnRomLoaded();
+						ClientApi.OnRomLoaded(Emulator);
 						return true;
 					}
 

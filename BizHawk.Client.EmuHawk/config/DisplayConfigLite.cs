@@ -89,7 +89,7 @@ namespace BizHawk.Client.EmuHawk
 
 			RefreshAspectRatioOptions();
 
-			if (PlatformLinkedLibSingleton.RunningOnUnix)
+			if (OSTailoredCode.CurrentOS != OSTailoredCode.DistinctOS.Windows)
 			{
 				// no slimdx
 				rbD3D9.Enabled = false;
@@ -192,6 +192,11 @@ namespace BizHawk.Client.EmuHawk
 				Global.Config.DispMethod = Config.EDispMethod.SlimDX9;
 			if (rbVulkan.Checked)
 				Global.Config.DispMethod = Config.EDispMethod.Vulkan;
+
+			int.TryParse(txtCropLeft.Text, out Global.Config.DispCropLeft);
+			int.TryParse(txtCropTop.Text, out Global.Config.DispCropTop);
+			int.TryParse(txtCropRight.Text, out Global.Config.DispCropRight);
+			int.TryParse(txtCropBottom.Text, out Global.Config.DispCropBottom);
 
 			if (oldDisplayMethod != Global.Config.DispMethod)
 				NeedReset = true;

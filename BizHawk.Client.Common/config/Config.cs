@@ -342,7 +342,7 @@ namespace BizHawk.Client.Common
 		public int DispPrescale = 1;
 
 		// warning: we dont even want to deal with changing this at runtime. but we want it changed here for config purposes. so dont check this variable. check in GlobalWin or something like that.
-		public EDispMethod DispMethod = !BizHawk.Common.PlatformLinkedLibSingleton.RunningOnUnix
+		public EDispMethod DispMethod = BizHawk.Common.OSTailoredCode.CurrentOS == BizHawk.Common.OSTailoredCode.DistinctOS.Windows
 			? EDispMethod.SlimDX9 : EDispMethod.GdiPlus;	// force GDI+ for linux when config is generated
 
 		public int DispChrome_FrameWindowed = 2;
@@ -371,7 +371,7 @@ namespace BizHawk.Client.Common
 		public int DispCropBottom = 0;
 
 		// Sound options
-		public ESoundOutputMethod SoundOutputMethod = !BizHawk.Common.PlatformLinkedLibSingleton.RunningOnUnix
+		public ESoundOutputMethod SoundOutputMethod = BizHawk.Common.OSTailoredCode.CurrentOS == BizHawk.Common.OSTailoredCode.DistinctOS.Windows
 			? ESoundOutputMethod.DirectSound : ESoundOutputMethod.OpenAL;	// force OpenAL for linux when config is generated
 
 		public bool SoundEnabled = true;

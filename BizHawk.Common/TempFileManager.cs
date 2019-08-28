@@ -37,7 +37,7 @@ namespace BizHawk.Common
 				throw new InvalidOperationException();
 			}
 
-			filename = "bizdelete-" + filename.Remove(0, 4);
+			filename = $"bizdelete-{filename.Remove(0, 4)}";
 			return Path.Combine(dir, filename);
 		}
 
@@ -67,7 +67,7 @@ namespace BizHawk.Common
 			//squirrely logic, trying not to create garbage
 			HashSet<string> knownTempDirs = new HashSet<string>();
 			List<DirectoryInfo> dis = new List<DirectoryInfo>();
-			for (;;)
+			for (; ; )
 			{
 				lock (typeof(TempFileManager))
 				{
@@ -76,7 +76,7 @@ namespace BizHawk.Common
 						dis = knownTempDirs.Select(x => new DirectoryInfo(x)).ToList();
 				}
 
-				foreach(var di in dis)
+				foreach (var di in dis)
 				{
 					FileInfo[] fis = null;
 					try
@@ -86,14 +86,16 @@ namespace BizHawk.Common
 					catch
 					{
 					}
-					if(fis != null)
+					if (fis != null)
 					{
 						foreach (var fi in fis)
 						{
 							try
 							{
-								if (PlatformLinkedLibSingleton.RunningOnUnix) fi.Delete();
-								else DeleteFileW(fi.FullName); // SHUT. UP. THE. EXCEPTIONS.
+								if (OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows)
+									DeleteFileW(fi.FullName); // SHUT. UP. THE. EXCEPTIONS.
+								else
+									fi.Delete();
 							}
 							catch
 							{

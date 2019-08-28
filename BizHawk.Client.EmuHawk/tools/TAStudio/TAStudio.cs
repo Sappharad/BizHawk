@@ -16,6 +16,7 @@ using BizHawk.Client.Common.MovieConversionExtensions;
 using BizHawk.Client.EmuHawk.WinFormExtensions;
 using BizHawk.Client.EmuHawk.ToolExtensions;
 using BizHawk.Emulation.Cores.Consoles.Nintendo.QuickNES;
+using BizHawk.Common;
 
 namespace BizHawk.Client.EmuHawk
 {
@@ -30,7 +31,7 @@ namespace BizHawk.Client.EmuHawk
 		/// 0:	GDI
 		/// 1:	GDI+
 		/// </summary>
-		public static int InputRollRenderer = BizHawk.Common.PlatformLinkedLibSingleton.RunningOnUnix ? 1 : 0;
+		public static int InputRollRenderer = OSTailoredCode.CurrentOS != OSTailoredCode.DistinctOS.Windows ? 1 : 0;
 
 		public bool IsInMenuLoop { get; private set; }
 		public string StatesPath => PathManager.MakeAbsolutePath(Global.Config.PathEntries["Global", "TAStudio states"].Path, null);
@@ -122,7 +123,7 @@ namespace BizHawk.Client.EmuHawk
 			Settings = new TAStudioSettings();
 
 			// input roll renderer must be set before InputRoll initialisation
-			InputRollRenderer = BizHawk.Common.PlatformLinkedLibSingleton.RunningOnUnix ? 1 : Global.Config.TasStudioRenderer;
+			InputRollRenderer = OSTailoredCode.CurrentOS != OSTailoredCode.DistinctOS.Windows ? 1 : Global.Config.TasStudioRenderer;
 			
 			InitializeComponent();
 			InitializeSeekWorker();

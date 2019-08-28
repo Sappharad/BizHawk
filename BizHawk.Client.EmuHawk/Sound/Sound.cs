@@ -26,7 +26,7 @@ namespace BizHawk.Client.EmuHawk
 		public Sound(IntPtr mainWindowHandle)
 		{
 			// at the moment unix/mono can only support OpenAL (so ignore whatever is set in the config)
-			if (PlatformLinkedLibSingleton.RunningOnUnix)
+			if (OSTailoredCode.CurrentOS != OSTailoredCode.DistinctOS.Windows)
 				_outputDevice = new OpenALSoundOutput(this);
 			else
 			{

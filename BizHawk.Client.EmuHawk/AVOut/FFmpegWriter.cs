@@ -87,7 +87,7 @@ namespace BizHawk.Client.EmuHawk
 			try
 			{
 				_ffmpeg = new Process();
-				_ffmpeg.StartInfo.FileName = PlatformLinkedLibSingleton.RunningOnUnix
+				_ffmpeg.StartInfo.FileName = OSTailoredCode.CurrentOS != OSTailoredCode.DistinctOS.Windows
 					? "ffmpeg"
 					: Path.Combine(PathManager.GetDllDirectory(), "ffmpeg.exe");
 

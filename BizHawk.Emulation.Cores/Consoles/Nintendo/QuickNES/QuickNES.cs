@@ -22,7 +22,12 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.QuickNES
 	{
 		static QuickNES()
 		{
-			Resolver = new DynamicLibraryImportResolver("libquicknes.dll" + (PlatformLinkedLibSingleton.RunningOnUnix ? ".so.0.7.0" : String.Empty));
+			string libName = "libquicknes.dll";
+			if(OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Linux)
+				libName += ".so.0.7.0";
+			if (OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.macOS)
+				libName = "libquicknes.dylib";
+			Resolver = new DynamicLibraryImportResolver(libName);
 			QN = BizInvoker.GetInvoker<LibQuickNES>(Resolver, CallingConventionAdapters.Native);
 			QN.qn_setup_mappers();
 		}
@@ -30,7 +35,7 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.QuickNES
 		[CoreConstructor("NES")]
 		public QuickNES(CoreComm comm, byte[] file, object settings, object syncSettings)
 		{
-			if (!PlatformLinkedLibSingleton.RunningOnUnix)
+			if (OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows)
 				FP = new Win32_FPCtrl();
 			else
 				FP = new Unix_FPCtrl();

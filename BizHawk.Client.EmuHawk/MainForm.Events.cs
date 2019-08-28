@@ -444,12 +444,12 @@ namespace BizHawk.Client.EmuHawk
 
 		private void SaveToCurrentSlotMenuItem_Click(object sender, EventArgs e)
 		{
-			SaveQuickSave("QuickSave" + Global.Config.SaveSlot);
+			SaveQuickSave($"QuickSave{Global.Config.SaveSlot}");
 		}
 
 		private void LoadCurrentSlotMenuItem_Click(object sender, EventArgs e)
 		{
-			LoadQuickSave("QuickSave" + Global.Config.SaveSlot);
+			LoadQuickSave($"QuickSave{Global.Config.SaveSlot}");
 		}
 
 		private void FlushSaveRAMMenuItem_Click(object sender, EventArgs e)
@@ -684,7 +684,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private void ScreenshotAsMenuItem_Click(object sender, EventArgs e)
 		{
-			var path = string.Format(PathManager.ScreenshotPrefix(Global.Game) + ".{0:yyyy-MM-dd HH.mm.ss}.png", DateTime.Now);
+			var path = $"{PathManager.ScreenshotPrefix(Global.Game)}.{DateTime.Now:yyyy-MM-dd HH.mm.ss}.png";
 
 			var sfd = new SaveFileDialog
 			{
@@ -1217,22 +1217,33 @@ namespace BizHawk.Client.EmuHawk
 		private void CoresSubMenu_DropDownOpened(object sender, EventArgs e)
 		{
 			GBInSGBMenuItem.Checked = Global.Config.GB_AsSGB;
-			SubNESHawkMenuItem.Checked = Global.Config.UseSubNESHawk;
-			
 			allowGameDBCoreOverridesToolStripMenuItem.Checked = Global.Config.CoreForcingViaGameDB;
 		}
 
 		private void NesCoreSubMenu_DropDownOpened(object sender, EventArgs e)
 		{
 			QuicknesCoreMenuItem.Checked = Global.Config.NES_InQuickNES;
-			NesCoreMenuItem.Checked = !Global.Config.NES_InQuickNES;
+			NesCoreMenuItem.Checked = !Global.Config.NES_InQuickNES && !Global.Config.UseSubNESHawk;
+			SubNesHawkMenuItem.Checked = Global.Config.UseSubNESHawk;
 		}
 
 		private void NesCorePick_Click(object sender, EventArgs e)
 		{
 			Global.Config.NES_InQuickNES ^= true;
+			Global.Config.UseSubNESHawk = false;
 
 			if (Emulator.SystemId == "NES")
+			{
+				FlagNeedsReboot();
+			}
+		}
+
+		private void SubNesCorePick_Click(object sender, EventArgs e)
+		{
+			Global.Config.UseSubNESHawk = true;
+			Global.Config.NES_InQuickNES = false;
+
+			if (!Emulator.IsNull())
 			{
 				FlagNeedsReboot();
 			}
@@ -1311,16 +1322,6 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 
-		private void SubNESHawkMenuItem_Click(object sender, EventArgs e)
-		{
-			Global.Config.UseSubNESHawk ^= true;
-
-			if (!Emulator.IsNull())
-			{
-				FlagNeedsReboot();
-			}
-		}
-
 		private void AllowGameDBCoreOverridesToolStripMenuItem_Click(object sender, EventArgs e)
 		{
 			Global.Config.CoreForcingViaGameDB ^= true;
@@ -1365,7 +1366,7 @@ namespace BizHawk.Client.EmuHawk
 			Global.Config = ConfigService.Load<Config>(PathManager.DefaultIniPath);
 			Global.Config.ResolveDefaults();
 			InitControls(); // rebind hotkeys
-			GlobalWin.OSD.AddMessage("Config file loaded: " + PathManager.DefaultIniPath);
+			GlobalWin.OSD.AddMessage($"Config file loaded: {PathManager.DefaultIniPath}");
 		}
 
 		private void LoadConfigFromMenuItem_Click(object sender, EventArgs e)
@@ -1384,7 +1385,7 @@ namespace BizHawk.Client.EmuHawk
 				Global.Config = ConfigService.Load<Config>(ofd.FileName);
 				Global.Config.ResolveDefaults();
 				InitControls(); // rebind hotkeys
-				GlobalWin.OSD.AddMessage("Config file loaded: " + ofd.FileName);
+				GlobalWin.OSD.AddMessage($"Config file loaded: {ofd.FileName}");
 			}
 		}
 
@@ -1470,17 +1471,13 @@ namespace BizHawk.Client.EmuHawk
 
 		private void RamSearchMenuItem_Click(object sender, EventArgs e)
 		{
-			if (PlatformLinkedLibSingleton.RunningOnUnix)
+			var ramSearch = GlobalWin.Tools.Load<RamSearch>();
+			if (OSTailoredCode.CurrentOS != OSTailoredCode.DistinctOS.Windows)
 			{
 				// this is apparently needed for weird mono-forms-on-different-thread issues
 				// dont do .Show() within Load<T>() for RamSearch - instead put an instance of it here on MainForm, then show here
 				// the mono winforms implementation is.... weird and buggy
-				RamSearch rs = GlobalWin.Tools.Load<RamSearch>();
-				rs.Show();
-			}
-			else
-			{
-				GlobalWin.Tools.Load<RamSearch>();
+				ramSearch.Show();
 			}
 		}
 
@@ -1613,10 +1610,10 @@ namespace BizHawk.Client.EmuHawk
 
 			for (int i = 0; i < 16; i++)
 			{
-				var str = "FDS Insert " + i;
+				var str = $"FDS Insert {i}";
 				if (Emulator.ControllerDefinition.BoolButtons.Contains(str))
 				{
-					FdsInsertDiskMenuAdd("Insert Disk " + i, str, "FDS Disk " + i + " inserted.");
+					FdsInsertDiskMenuAdd($"Insert Disk {i}", str, $"FDS Disk {i} inserted.");
 				}
 			}
 		}
@@ -2389,6 +2386,24 @@ namespace BizHawk.Client.EmuHawk
 
 		#endregion
 
+		#region GGL
+
+		private void GGLSettingsMenuItem_Click(object sender, EventArgs e)
+		{
+			GenericCoreConfig.DoDialog(this, "Game Gear Settings");
+		}
+
+		#endregion
+
+		#region Vectrex
+
+		private void VectrexSettingsMenuItem_Click(object sender, EventArgs e)
+		{
+			GenericCoreConfig.DoDialog(this, "Vectrex Settings");
+		}
+
+		#endregion
+
 		#region GEN
 
 		private void GenVdpViewerMenuItem_Click(object sender, EventArgs e)
@@ -2443,8 +2458,8 @@ namespace BizHawk.Client.EmuHawk
 				{
 					var menuItem = new ToolStripMenuItem
 					{
-						Name = "Disk" + (i + 1),
-						Text = "Disk" + (i + 1),
+						Name = $"Disk{i + 1}",
+						Text = $"Disk{i + 1}",
 						Checked = appleII.CurrentDisk == i
 					};
 
@@ -2482,8 +2497,8 @@ namespace BizHawk.Client.EmuHawk
 				{
 					var menuItem = new ToolStripMenuItem
 					{
-						Name = "Disk" + (i + 1),
-						Text = "Disk" + (i + 1),
+						Name = $"Disk{i + 1}",
+						Text = $"Disk{i + 1}",
 						Checked = c64.CurrentDisk == i
 					};
 
@@ -2584,8 +2599,8 @@ namespace BizHawk.Client.EmuHawk
 
                     var menuItem = new ToolStripMenuItem
                     {
-                        Name = i + "_" + name,
-                        Text = i + ": " + name,
+                        Name = $"{i}_{name}",
+                        Text = $"{i}: {name}",
                         Checked = currSel == i
                     };
 
@@ -2619,8 +2634,8 @@ namespace BizHawk.Client.EmuHawk
 
                     var menuItem = new ToolStripMenuItem
                     {
-                        Name = i + "_" + name,
-                        Text = i + ": " + name,
+                        Name = $"{i}_{name}",
+                        Text = $"{i}: {name}",
                         Checked = currSel == i
                     };
 
@@ -2708,8 +2723,8 @@ namespace BizHawk.Client.EmuHawk
 
                     var menuItem = new ToolStripMenuItem
                     {
-                        Name = i + "_" + name,
-                        Text = i + ": " + name,
+                        Name = $"{i}_{name}",
+                        Text = $"{i}: {name}",
                         Checked = currSel == i
                     };
 
@@ -2743,8 +2758,8 @@ namespace BizHawk.Client.EmuHawk
 
                     var menuItem = new ToolStripMenuItem
                     {
-                        Name = i + "_" + name,
-                        Text = i + ": " + name,
+                        Name = $"{i}_{name}",
+                        Text = $"{i}: {name}",
                         Checked = currSel == i
                     };
 
@@ -2882,23 +2897,19 @@ namespace BizHawk.Client.EmuHawk
 				}
 			}
 
-			var file = new FileInfo(
-				PathManager.SaveStatePrefix(Global.Game) +
-				".QuickSave" +
-				Global.Config.SaveSlot +
-				".State.bak");
+			var file = new FileInfo($"{PathManager.SaveStatePrefix(Global.Game)}.QuickSave{Global.Config.SaveSlot}.State.bak");
 
 			if (file.Exists)
 			{
 				UndoSavestateContextMenuItem.Enabled = true;
 				if (_stateSlots.IsRedo(Global.Config.SaveSlot))
 				{
-					UndoSavestateContextMenuItem.Text = "Redo Save to slot " + Global.Config.SaveSlot;
+					UndoSavestateContextMenuItem.Text = $"Redo Save to slot {Global.Config.SaveSlot}";
 					UndoSavestateContextMenuItem.Image = Properties.Resources.redo;
 				}
 				else
 				{
-					UndoSavestateContextMenuItem.Text = "Undo Save to slot " + Global.Config.SaveSlot;
+					UndoSavestateContextMenuItem.Text = $"Undo Save to slot {Global.Config.SaveSlot}";
 					UndoSavestateContextMenuItem.Image = Properties.Resources.undo;
 				}
 			}
@@ -3028,13 +3039,9 @@ namespace BizHawk.Client.EmuHawk
 
 		private void UndoSavestateContextMenuItem_Click(object sender, EventArgs e)
 		{
-			_stateSlots.SwapBackupSavestate(
-				PathManager.SaveStatePrefix(Global.Game) +
-				".QuickSave" +
-				Global.Config.SaveSlot +
-				".State");
+			_stateSlots.SwapBackupSavestate($"{PathManager.SaveStatePrefix(Global.Game)}.QuickSave{Global.Config.SaveSlot}.State");
 
-			GlobalWin.OSD.AddMessage("Save slot " + Global.Config.SaveSlot + " restored.");
+			GlobalWin.OSD.AddMessage($"Save slot {Global.Config.SaveSlot} restored.");
 		}
 
 		private void ClearSramContextMenuItem_Click(object sender, EventArgs e)
@@ -3081,12 +3088,12 @@ namespace BizHawk.Client.EmuHawk
 			{
 				if (_stateSlots.HasSlot(slot))
 				{
-					LoadQuickSave("QuickSave" + slot);
+					LoadQuickSave($"QuickSave{slot}");
 				}
 			}
 			else if (e.Button == MouseButtons.Right)
 			{
-				SaveQuickSave("QuickSave" + slot);
+				SaveQuickSave($"QuickSave{slot}");
 			}
 		}
 
@@ -3127,11 +3134,21 @@ namespace BizHawk.Client.EmuHawk
 			ProfileFirstBootLabel.Visible = false;
 		}
 
+		private void LinkConnectStatusBarButton_Click(object sender, EventArgs e)
+		{
+			// toggle Link status (only outside of a movie session)
+			if (!Global.MovieSession.Movie.IsPlaying || Global.MovieSession.Movie.IsFinished)
+			{
+				Emulator.AsLinkable().LinkConnected ^= true;
+				Console.WriteLine("Cable connect status to {0}", Emulator.AsLinkable().LinkConnected);
+			}
+		}
+
 		private void UpdateNotification_Click(object sender, EventArgs e)
 		{
 			GlobalWin.Sound.StopSound();
 			DialogResult result = MessageBox.Show(this,
-				"Version " + Global.Config.Update_LatestVersion + " is now available. Would you like to open the BizHawk homepage?\r\n\r\nClick \"No\" to hide the update notification for this version.",
+				$"Version {Global.Config.Update_LatestVersion} is now available. Would you like to open the BizHawk homepage?\r\n\r\nClick \"No\" to hide the update notification for this version.",
 				"New Version Available", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
 			GlobalWin.Sound.StartSound();
 
@@ -3266,7 +3283,7 @@ namespace BizHawk.Client.EmuHawk
 			}
 			catch (Exception ex)
 			{
-				MessageBox.Show("Exception on drag and drop:\n" + ex);
+				MessageBox.Show($"Exception on drag and drop:\n{ex}");
 			}
 		}
 

@@ -9,6 +9,7 @@ using BizHawk.Client.Common;
 using BizHawk.Client.Common.MovieConversionExtensions;
 using BizHawk.Client.EmuHawk.ToolExtensions;
 using BizHawk.Client.EmuHawk.WinFormExtensions;
+using BizHawk.Common;
 
 namespace BizHawk.Client.EmuHawk
 {
@@ -1117,7 +1118,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private void SelectedRendererSubMenu_DropDownOpened(object sender, EventArgs e)
 		{
-			if (BizHawk.Common.PlatformLinkedLibSingleton.RunningOnUnix)
+			if (OSTailoredCode.CurrentOS != OSTailoredCode.DistinctOS.Windows)
 			{
 				SetRenderer0.Checked = false;
 				SetRenderer0.Enabled = false;

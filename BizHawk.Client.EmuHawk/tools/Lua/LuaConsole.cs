@@ -173,7 +173,7 @@ namespace BizHawk.Client.EmuHawk
 			}
 
 			var currentScripts = LuaImp?.ScriptList; // Temp fix for now
-			LuaImp = PlatformLinkedLibSingleton.RunningOnUnix
+			LuaImp = OSTailoredCode.CurrentOS != OSTailoredCode.DistinctOS.Windows
 				? (PlatformEmuLuaLibrary) new EmuLuaLibrary(Emulator.ServiceProvider)//NotReallyLuaLibrary()
 				: (PlatformEmuLuaLibrary) new EmuLuaLibrary(Emulator.ServiceProvider);
 			if (currentScripts != null)

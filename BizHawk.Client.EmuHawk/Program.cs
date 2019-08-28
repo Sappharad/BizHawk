@@ -21,9 +21,9 @@ namespace BizHawk.Client.EmuHawk
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
 
-			if (!EXE_PROJECT.PlatformLinkedLibSingleton.RunningOnUnix)
+			if (OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows)
 			{
-				var libLoader = EXE_PROJECT.PlatformLinkedLibSingleton.LinkedLibManager;
+				var libLoader = OSTailoredCode.LinkedLibManager;
 
 				//http://www.codeproject.com/Articles/310675/AppDomain-AssemblyResolve-Event-Tips
 
@@ -90,7 +90,7 @@ namespace BizHawk.Client.EmuHawk
 			// We have a problem on mono where the application (most of the time) does not terminate correctly
 			// and we have to CTRL-C to kill the mono process
 			// This forces mono to go away immediately
-			if (EXE_PROJECT.PlatformLinkedLibSingleton.RunningOnUnix)
+			if (OSTailoredCode.CurrentOS != OSTailoredCode.DistinctOS.Windows)
 			{
 				Console.WriteLine("BizHawk has completed it's shutdown routines");
 				Console.WriteLine("Attempting to kill mono...");
@@ -121,7 +121,7 @@ namespace BizHawk.Client.EmuHawk
 
 			BizHawk.Common.TempFileManager.Start();			
 			
-			if (PlatformLinkedLibSingleton.RunningOnUnix)
+			if (OSTailoredCode.CurrentOS != OSTailoredCode.DistinctOS.Windows)
 				HawkFile.ArchiveHandlerFactory = new SharpCompressArchiveHandler();
 			else
 				HawkFile.ArchiveHandlerFactory = new SevenZipSharpArchiveHandler();
@@ -182,7 +182,7 @@ namespace BizHawk.Client.EmuHawk
 					goto REDO_DISPMETHOD;
 				}
 			}
-			else if (Global.Config.DispMethod == Config.EDispMethod.SlimDX9 && !EXE_PROJECT.PlatformLinkedLibSingleton.RunningOnUnix)
+			else if (Global.Config.DispMethod == Config.EDispMethod.SlimDX9 && OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows)
 			{
 				try
 				{
@@ -225,7 +225,7 @@ namespace BizHawk.Client.EmuHawk
 				goto REDO_DISPMETHOD;
 			}
 
-			if (!EXE_PROJECT.PlatformLinkedLibSingleton.RunningOnUnix)
+			if (OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows)
 			{
 				//WHY do we have to do this? some intel graphics drivers (ig7icd64.dll 10.18.10.3304 on an unknown chip on win8.1) are calling SetDllDirectory() for the process, which ruins stuff.
 				//The relevant initialization happened just before in "create IGL context".
@@ -358,7 +358,7 @@ namespace BizHawk.Client.EmuHawk
 					UseNLua = false;
 				}
 
-				if (!UseNLua && !EXE_PROJECT.PlatformLinkedLibSingleton.RunningOnUnix)
+				if (!UseNLua && OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows)
 				{
 					// currently LuaInterface is not working/implemented on Mono so we always force NLua, otherwise:
 					requested = "LuaInterface";

@@ -42,7 +42,7 @@ namespace BizHawk.Common.BizInvoke
 		protected int GetPage(ulong addr)
 		{
 			if (addr < Start || addr >= End) throw new ArgumentOutOfRangeException();
-			return (int) ((addr - Start) >> WaterboxUtils.PageShift);
+			return (int)((addr - Start) >> WaterboxUtils.PageShift);
 		}
 
 		/// <summary>
@@ -50,7 +50,7 @@ namespace BizHawk.Common.BizInvoke
 		/// </summary>
 		protected ulong GetStartAddr(int page)
 		{
-			return ((ulong) page << WaterboxUtils.PageShift) + Start;
+			return ((ulong)page << WaterboxUtils.PageShift) + Start;
 		}
 
 		/// <summary>
@@ -78,7 +78,7 @@ namespace BizHawk.Common.BizInvoke
 		{
 			if (start < Start) throw new ArgumentOutOfRangeException(nameof(start));
 			if (start + length > End) throw new ArgumentOutOfRangeException(nameof(length));
-			return new MemoryViewStream(!writer, writer, (long) start, (long) length, this);
+			return new MemoryViewStream(!writer, writer, (long)start, (long)length, this);
 		}
 
 		/// <summary>
@@ -90,7 +90,7 @@ namespace BizHawk.Common.BizInvoke
 			if (start < Start) throw new ArgumentOutOfRangeException(nameof(start));
 			if (start + length > End) throw new ArgumentOutOfRangeException(nameof(length));
 			if (_snapshot == null) throw new InvalidOperationException("No snapshot taken!");
-			return new MemoryViewXorStream(!writer, writer, (long) start, (long) length, this, _snapshot, (long) (start - Start));
+			return new MemoryViewXorStream(!writer, writer, (long)start, (long)length, this, _snapshot, (long)(start - Start));
 		}
 
 		/// <summary>
@@ -139,12 +139,17 @@ namespace BizHawk.Common.BizInvoke
 		/// </summary>
 		public static MemoryBlock PlatformConstructor(ulong start, ulong size)
 		{
-//			return PlatformLinkedLibSingleton.RunningOnUnix
-//				? (MemoryBlock) new MemoryBlockUnix(start, size)
-//				: (MemoryBlock) new MemoryBlockWin32(start, size);
-			if (PlatformLinkedLibSingleton.RunningOnUnix)
-				throw new InvalidOperationException("ctor of nonfunctional MemoryBlockUnix class");
-			return new MemoryBlockWin32(start, size);
+			switch (OSTailoredCode.CurrentOS)
+			{
+				case OSTailoredCode.DistinctOS.Linux:
+				case OSTailoredCode.DistinctOS.macOS:
+					//					return new MemoryBlockUnix(start, size);
+					throw new InvalidOperationException("ctor of nonfunctional MemoryBlockUnix class");
+				case OSTailoredCode.DistinctOS.Windows:
+					return new MemoryBlockWin32(start, size);
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
 		}
 
 		private class MemoryViewStream : Stream
@@ -194,7 +199,7 @@ namespace BizHawk.Common.BizInvoke
 				if (!_readable) throw new InvalidOperationException();
 				if (count < 0 || count + offset > buffer.Length) throw new ArgumentOutOfRangeException();
 				EnsureNotDisposed();
-				count = (int) Math.Min(count, _length - _pos);
+				count = (int)Math.Min(count, _length - _pos);
 				Marshal.Copy(Z.SS(_ptr + _pos), buffer, offset, count);
 				_pos += count;
 				return count;
@@ -243,7 +248,7 @@ namespace BizHawk.Common.BizInvoke
 				: base(readable, writable, ptr, length, owner)
 			{
 				_initial = initial;
-				_offset = (int) offset;
+				_offset = (int)offset;
 			}
 
 			/// <summary>
@@ -258,7 +263,7 @@ namespace BizHawk.Common.BizInvoke
 
 			public override int Read(byte[] buffer, int offset, int count)
 			{
-				int pos = (int) Position;
+				int pos = (int)Position;
 				count = base.Read(buffer, offset, count);
 				XorTransform(_initial, _offset + pos, buffer, offset, count);
 				return count;
@@ -266,7 +271,7 @@ namespace BizHawk.Common.BizInvoke
 
 			public override void Write(byte[] buffer, int offset, int count)
 			{
-				int pos = (int) Position;
+				int pos = (int)Position;
 				if (count < 0 || count + offset > buffer.Length || count > Length - pos)
 					throw new ArgumentOutOfRangeException();
 				// is mutating the buffer passed to Stream.Write kosher?

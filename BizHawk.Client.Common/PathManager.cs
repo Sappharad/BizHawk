@@ -407,7 +407,7 @@ namespace BizHawk.Client.Common
 				GetGlobalBasePathAbsolute() :
 				MakeAbsolutePath(GetPlatformBase(system), system);
 
-			if (!BizHawk.Common.PlatformLinkedLibSingleton.RunningOnUnix)
+			if (BizHawk.Common.OSTailoredCode.CurrentOS == BizHawk.Common.OSTailoredCode.DistinctOS.Windows)
 			{
 				if (IsSubfolder(parentPath, absolutePath))
 				{
@@ -443,7 +443,7 @@ namespace BizHawk.Client.Common
 		// http://stackoverflow.com/questions/3525775/how-to-check-if-directory-1-is-a-subdirectory-of-dir2-and-vice-versa
 		private static bool IsSubfolder(string parentPath, string childPath)
 		{
-			if (!BizHawk.Common.PlatformLinkedLibSingleton.RunningOnUnix)
+			if (BizHawk.Common.OSTailoredCode.CurrentOS == BizHawk.Common.OSTailoredCode.DistinctOS.Windows)
 			{
 				var parentUri = new Uri(parentPath);
 

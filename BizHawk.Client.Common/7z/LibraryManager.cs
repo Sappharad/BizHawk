@@ -145,7 +145,7 @@ namespace SevenZip
                 Init();
             }
 #if !WINCE && !MONO
-            if (_modulePtr == IntPtr.Zero)
+            if (OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows && _modulePtr == IntPtr.Zero)
             {
 							//zero 29-oct-2012 - this check isnt useful since LoadLibrary can pretty much check for the same thing. and it wrecks our dll relocation scheme
 								//if (!File.Exists(_libraryFileName))

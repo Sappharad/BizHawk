@@ -24,7 +24,7 @@ namespace BizHawk.Client.EmuHawkMacApp
 			//BizHawk.Common.TempFileCleaner.Start();
 
 
-			HawkFile.ArchiveHandlerFactory = new SevenZipSharpArchiveHandler();
+			HawkFile.ArchiveHandlerFactory = new SharpCompressArchiveHandler();
 
 			string iniPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "config.ini");
 

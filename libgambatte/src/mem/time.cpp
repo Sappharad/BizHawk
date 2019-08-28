@@ -128,7 +128,7 @@ void Time::cyclesFromTime(unsigned long const cc) {
 void Time::timeFromCycles(unsigned long const cc) {
 	update(cc);
 	unsigned long diff = cc - lastCycles_;
-	timeval usec = { 0, (long)(diff / ((rtcDivisor_ << ds_) / 1000000.0f)) };
+    timeval usec = { 0, static_cast<uint32_t>((long)(diff / ((rtcDivisor_ << ds_) / 1000000.0f))) };
 	lastTime_ = now() - usec;
 }
 

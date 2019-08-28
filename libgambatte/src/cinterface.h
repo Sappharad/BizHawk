@@ -23,7 +23,7 @@
 
 #ifdef _WIN32
 #define GBEXPORT extern "C" __declspec(dllexport)
-#elif __linux__
+#elif __linux__ || __APPLE__
 #define GBEXPORT extern "C"
 #endif
 

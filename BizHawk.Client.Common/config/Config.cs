@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 
+using BizHawk.Common;
 using BizHawk.Emulation.Common;
 
 // ReSharper disable FieldCanBeMadeReadOnly.Global
@@ -103,6 +104,8 @@ namespace BizHawk.Client.Common
 		public int MainHeight = -1;
 		public bool RunInBackground = true;
 		public bool AcceptBackgroundInput = false;
+		public bool AcceptBackgroundInputControllerOnly = false;
+		public bool HandleAlternateKeyboardLayouts = false;
 		public bool SingleInstanceMode = false;
 		public bool AllowUD_LR = false;
 		public bool ForbidUD_LR = false;
@@ -170,7 +173,7 @@ namespace BizHawk.Client.Common
 
 		public enum EDispMethod
 		{
-			OpenGL, GdiPlus, SlimDX9, Vulkan
+			OpenGL, GdiPlus, SlimDX9
 		}
 
 		public enum ESoundOutputMethod
@@ -341,9 +344,11 @@ namespace BizHawk.Client.Common
 		
 		public int DispPrescale = 1;
 
-		// warning: we dont even want to deal with changing this at runtime. but we want it changed here for config purposes. so dont check this variable. check in GlobalWin or something like that.
-		public EDispMethod DispMethod = BizHawk.Common.OSTailoredCode.CurrentOS == BizHawk.Common.OSTailoredCode.DistinctOS.Windows
-			? EDispMethod.SlimDX9 : EDispMethod.GdiPlus;	// force GDI+ for linux when config is generated
+		/// <remarks>
+		/// warning: we dont even want to deal with changing this at runtime. but we want it changed here for config purposes. so dont check this variable. check in GlobalWin or something like that.
+		/// force DX for Windows and OpenGL for Unix when a new config is generated
+		/// </remarks>
+		public EDispMethod DispMethod = OSTailoredCode.IsUnixHost ? EDispMethod.OpenGL : EDispMethod.SlimDX9;
 
 		public int DispChrome_FrameWindowed = 2;
 		public bool DispChrome_StatusBarWindowed = true;
@@ -371,9 +376,7 @@ namespace BizHawk.Client.Common
 		public int DispCropBottom = 0;
 
 		// Sound options
-		public ESoundOutputMethod SoundOutputMethod = BizHawk.Common.OSTailoredCode.CurrentOS == BizHawk.Common.OSTailoredCode.DistinctOS.Windows
-			? ESoundOutputMethod.DirectSound : ESoundOutputMethod.OpenAL;	// force OpenAL for linux when config is generated
-
+		public ESoundOutputMethod SoundOutputMethod = OSTailoredCode.IsUnixHost ? ESoundOutputMethod.OpenAL : ESoundOutputMethod.DirectSound; // force OpenAL for Unix when config is generated
 		public bool SoundEnabled = true;
 		public bool SoundEnabledNormal = true;
 		public bool SoundEnabledRWFF = true;
@@ -396,7 +399,6 @@ namespace BizHawk.Client.Common
 		public RecentFiles RecentLuaSession = new RecentFiles(8);
 		public bool DisableLuaScriptsOnLoad = false;
 		public bool ToggleAllIfNoneSelected = true;
-		public bool RemoveRegisteredFunctionsOnToggle = true;
 		public bool LuaReloadOnScriptFileChange = false;
 		public bool RunLuaDuringTurbo = true;
 
@@ -504,7 +506,6 @@ namespace BizHawk.Client.Common
 
 		// TAStudio
 		public TasStateManagerSettings DefaultTasProjSettings = new TasStateManagerSettings();
-		public int TasStudioRenderer = 0; // defaults to 0 (GDI) - on linux this is forced to GDI+ later on
 
 		// Macro Tool
 		public RecentFiles RecentMacros = new RecentFiles(8);

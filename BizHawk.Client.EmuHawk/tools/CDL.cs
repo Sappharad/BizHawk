@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 
 using BizHawk.Emulation.Common;
@@ -10,7 +11,7 @@ using BizHawk.Client.EmuHawk.ToolExtensions;
 using BizHawk.Common;
 
 //TODO - select which memorydomains go out to the CDL file. will this cause a problem when re-importing it? 
-//perhaps missing domains shouldnt fail a check
+  //perhaps missing domains shouldnt fail a check
 //OR - just add a contextmenu option to the listview item that selects it for export.
 //TODO - add a contextmenu option which warps to the hexeditor with the provided domain selected for visualizing on the hex editor.
 //TODO - consider setting colors for columns in CDL
@@ -59,6 +60,24 @@ namespace BizHawk.Client.EmuHawk
 			InitializeComponent();
 
 			tsbViewStyle.SelectedIndex = 0;
+
+			lvCDL.AllColumns.Clear();
+			lvCDL.AllColumns.AddRange(new []
+			{
+				new RollColumn { Name = "CDLFile", Text = "CDL File @", Width = 107, Type = ColumnType.Text  },
+				new RollColumn { Name = "Domain", Text = "Domain", Width = 126, Type = ColumnType.Text  },
+				new RollColumn { Name = "Percent", Text = "%", Width = 58, Type = ColumnType.Text  },
+				new RollColumn { Name = "Mapped", Text = "Mapped", Width = 64, Type = ColumnType.Text  },
+				new RollColumn { Name = "Size", Text = "Size", Width = 112, Type = ColumnType.Text  },
+				new RollColumn { Name = "0x01", Text = "0x01", Width = 56, Type = ColumnType.Text  },
+				new RollColumn { Name = "0x02", Text = "0x02", Width = 56, Type = ColumnType.Text  },
+				new RollColumn { Name = "0x04", Text = "0x04", Width = 56, Type = ColumnType.Text  },
+				new RollColumn { Name = "0x08", Text = "0x08", Width = 56, Type = ColumnType.Text  },
+				new RollColumn { Name = "0x10", Text = "0x10", Width = 56, Type = ColumnType.Text  },
+				new RollColumn { Name = "0x20", Text = "0x20", Width = 56, Type = ColumnType.Text  },
+				new RollColumn { Name = "0x40", Text = "0x40", Width = 56, Type = ColumnType.Text  },
+				new RollColumn { Name = "0x80", Text = "0x80", Width = 56, Type = ColumnType.Text  }
+			});
 		}
 
 		public void NewUpdate(ToolFormUpdateType type) { }
@@ -98,19 +117,9 @@ namespace BizHawk.Client.EmuHawk
 
 			if (_cdl == null)
 			{
-				lvCDL.BeginUpdate();
-				if (OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows)
-				{
-					// this is a winforms implementation problem for mono
-					// see https://github.com/mono/mono/issues/11070
-					// until this is resolved in mono we should just skip this call
-					lvCDL.Items.Clear();
-				}
-				lvCDL.EndUpdate();
+				lvCDL.DeselectAll();
 				return;
 			}
-
-			lvCDL.BeginUpdate();
 
 			listContents = new string[_cdl.Count][];
 
@@ -180,8 +189,7 @@ namespace BizHawk.Client.EmuHawk
 				}
 
 			}
-			lvCDL.VirtualListSize = _cdl.Count;
-			lvCDL.EndUpdate();
+			lvCDL.RowCount = _cdl.Count;
 		}
 
 		public bool AskSaveChanges()
@@ -449,7 +457,7 @@ namespace BizHawk.Client.EmuHawk
 				return;
 			}
 
-			var sfd = new SaveFileDialog();
+			using var sfd = new SaveFileDialog();
 			var result = sfd.ShowDialog(this);
 			if (result == DialogResult.OK)
 			{
@@ -568,14 +576,15 @@ namespace BizHawk.Client.EmuHawk
 				CodeDataLogger.SetCDL(null);
 		}
 
-		private void lvCDL_QueryItemText(int item, int subItem, out string text)
+		private void lvCDL_QueryItemText(int index, RollColumn column, out string text, ref int offsetX, ref int offsetY)
 		{
-			text = listContents[item][subItem];
+			var subItem = lvCDL.AllColumns.IndexOf(column);
+			text = listContents[index][subItem];
 		}
 
 		private void tsbExportText_Click(object sender, EventArgs e)
 		{
-			StringWriter sw = new StringWriter();
+			using var sw = new StringWriter();
 			foreach(var line in listContents)
 			{
 				foreach (var entry in line)

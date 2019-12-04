@@ -106,10 +106,10 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		[LuaMethodExample("client.frameskip( 8 );")]
-		[LuaMethod("frameskip", "Sets the frame skip value of the client UI")]
+		[LuaMethod("frameskip", "Sets the frame skip value of the client UI (use 0 to disable)")]
 		public void FrameSkip(int numFrames)
 		{
-			if (numFrames > 0)
+			if (numFrames >= 0)
 			{
 				Global.Config.FrameSkip = numFrames;
 				GlobalWin.MainForm.FrameSkipMessage();
@@ -117,6 +117,42 @@ namespace BizHawk.Client.EmuHawk
 			else
 			{
 				Log("Invalid frame skip value");
+			}
+		}
+
+		/// <summary>
+		/// Use with <see cref="SeekFrame(int)"/> for CamHack.
+		/// Refer to <see cref="MainForm.InvisibleEmulation"/> for the workflow details.
+		/// </summary>
+		[LuaMethodExample("client.invisibleemulation( true );")]
+		[LuaMethod("invisibleemulation", "Disables and enables emulator updates")]
+		public void InvisibleEmulation(bool invisible)
+		{
+			GlobalWin.MainForm.InvisibleEmulation = invisible;
+		}
+
+		/// <summary>
+		/// Use with <see cref="InvisibleEmulation(bool)"/> for CamHack.
+		/// Refer to <see cref="MainForm.InvisibleEmulation"/> for the workflow details.
+		/// </summary>
+		[LuaMethodExample("client.seekframe( 100 );")]
+		[LuaMethod("seekframe", "Makes the emulator seek to the frame specified")]
+		public void SeekFrame(int frame)
+		{
+			bool wasPaused = GlobalWin.MainForm.EmulatorPaused;
+
+			// can't re-enter lua while doing this
+			GlobalWin.MainForm.SuppressLua = true;
+			while (Emulator.Frame != frame)
+			{
+				GlobalWin.MainForm.SeekFrameAdvance();
+			}
+
+			GlobalWin.MainForm.SuppressLua = false;
+
+			if (!wasPaused)
+			{
+				GlobalWin.MainForm.UnpauseEmulator();
 			}
 		}
 
@@ -404,12 +440,12 @@ namespace BizHawk.Client.EmuHawk
 			return GlobalWin.MainForm.DesktopLocation.Y;
 		}
 
-        [LuaMethodExample("local incbhver = client.getversion( );")]
-        [LuaMethod("getversion", "Returns the current stable BizHawk version")]
-        public static string GetVersion()
-        {
-            return VersionInfo.Mainversion;            
-        }
+		[LuaMethodExample("local incbhver = client.getversion( );")]
+		[LuaMethod("getversion", "Returns the current stable BizHawk version")]
+		public static string GetVersion()
+		{
+			return VersionInfo.Mainversion;
+		}
 
 		[LuaMethodExample("local nlcliget = client.getavailabletools( );")]
 		[LuaMethod("getavailabletools", "Returns a list of the tools currently open")]

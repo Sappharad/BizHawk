@@ -67,7 +67,7 @@ namespace BizHawk.Common
 			//squirrely logic, trying not to create garbage
 			HashSet<string> knownTempDirs = new HashSet<string>();
 			List<DirectoryInfo> dis = new List<DirectoryInfo>();
-			for (; ; )
+			for (;;)
 			{
 				lock (typeof(TempFileManager))
 				{
@@ -76,7 +76,7 @@ namespace BizHawk.Common
 						dis = knownTempDirs.Select(x => new DirectoryInfo(x)).ToList();
 				}
 
-				foreach (var di in dis)
+				foreach(var di in dis)
 				{
 					FileInfo[] fis = null;
 					try
@@ -86,16 +86,21 @@ namespace BizHawk.Common
 					catch
 					{
 					}
-					if (fis != null)
+
+					if(fis != null)
 					{
 						foreach (var fi in fis)
 						{
 							try
 							{
-								if (OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows)
-									DeleteFileW(fi.FullName); // SHUT. UP. THE. EXCEPTIONS.
+								if (OSTailoredCode.IsUnixHost)
+								{
+									fi.Delete(); // naive deletion, Mono doesn't care
+								}
 								else
-									fi.Delete();
+								{
+									DeleteFileW(fi.FullName); // SHUT. UP. THE. EXCEPTIONS.
+								}
 							}
 							catch
 							{
@@ -107,7 +112,7 @@ namespace BizHawk.Common
 					}
 				}
 
-				// try not to slam the filesystem too hard, we dont want this to cause any hiccups
+				// try not to slam the filesystem too hard, we don't want this to cause any hiccups
 				Thread.Sleep(5000);
 			}
 		}

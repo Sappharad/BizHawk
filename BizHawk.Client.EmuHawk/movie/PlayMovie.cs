@@ -15,7 +15,7 @@ namespace BizHawk.Client.EmuHawk
 {
 	public partial class PlayMovie : Form
 	{
-		private readonly PlatformFrameRates PlatformFrameRates = new PlatformFrameRates();
+		private readonly PlatformFrameRates _platformFrameRates = new PlatformFrameRates();
 
 		private List<IMovie> _movieList = new List<IMovie>();
 		private bool _sortReverse;
@@ -27,7 +27,7 @@ namespace BizHawk.Client.EmuHawk
 		public PlayMovie()
 		{
 			InitializeComponent();
-			MovieView.QueryItemText += MovieView_QueryItemText;
+			MovieView.RetrieveVirtualItem += MovieView_QueryItemText;
 			MovieView.VirtualMode = true;
 			_sortReverse = false;
 			_sortedCol = "";
@@ -45,28 +45,13 @@ namespace BizHawk.Client.EmuHawk
 			TurboCheckbox.Checked = Global.Config.TurboSeek;
 		}
 
-		private void MovieView_QueryItemText(int index, int column, out string text)
+		private void MovieView_QueryItemText(object sender, RetrieveVirtualItemEventArgs e)
 		{
-			text = "";
-			if (column == 0) // File
-			{
-				text = Path.GetFileName(_movieList[index].Filename);
-			}
-
-			if (column == 1) // System
-			{
-				text = _movieList[index].SystemID;
-			}
-
-			if (column == 2) // Game
-			{
-				text = _movieList[index].GameName;
-			}
-
-			if (column == 3) // Time
-			{
-				text = PlatformFrameRates.MovieTime(_movieList[index]).ToString(@"hh\:mm\:ss\.fff");
-			}
+			var entry = _movieList[e.ItemIndex];
+			e.Item = new ListViewItem(entry.Filename);
+			e.Item.SubItems.Add(entry.SystemID);
+			e.Item.SubItems.Add(entry.GameName);
+			e.Item.SubItems.Add(_platformFrameRates.MovieTime(entry).ToString(@"hh\:mm\:ss\.fff"));
 		}
 
 		private void Run()
@@ -80,38 +65,36 @@ namespace BizHawk.Client.EmuHawk
 
 		private int? AddMovieToList(string filename, bool force)
 		{
-			using (var file = new HawkFile(filename))
+			using var file = new HawkFile(filename);
+			if (!file.Exists)
 			{
-				if (!file.Exists)
-				{
-					return null;
-				}
-				
-				var movie = PreLoadMovieFile(file, force);
-				if (movie == null)
-				{
-					return null;
-				}
-
-				int? index;
-				lock (_movieList)
-				{
-					// need to check IsDuplicateOf within the lock
-					index = IsDuplicateOf(filename);
-					if (index.HasValue)
-					{
-						return index;
-					}
-
-					_movieList.Add(movie);
-					index = _movieList.Count - 1;
-				}
-
-				_sortReverse = false;
-				_sortedCol = "";
-
-				return index;
+				return null;
 			}
+				
+			var movie = PreLoadMovieFile(file, force);
+			if (movie == null)
+			{
+				return null;
+			}
+
+			int? index;
+			lock (_movieList)
+			{
+				// need to check IsDuplicateOf within the lock
+				index = IsDuplicateOf(filename);
+				if (index.HasValue)
+				{
+					return index;
+				}
+
+				_movieList.Add(movie);
+				index = _movieList.Count - 1;
+			}
+
+			_sortReverse = false;
+			_sortedCol = "";
+
+			return index;
 		}
 
 		private int? IsDuplicateOf(string filename)
@@ -192,7 +175,7 @@ namespace BizHawk.Client.EmuHawk
 			{
 				foreach (var ext in MovieService.MovieExtensions)
 				{
-					if (Path.GetExtension(_movieList[indices[i]].Filename).ToUpper() == $".{ext}")
+					if (Path.GetExtension(_movieList[indices[i]].Filename)?.ToUpper() == $".{ext}")
 					{
 						tas.Add(i);
 					}
@@ -230,14 +213,13 @@ namespace BizHawk.Client.EmuHawk
 		private void HighlightMovie(int index)
 		{
 			MovieView.SelectedIndices.Clear();
-			MovieView.setSelection(index);
-			MovieView.SelectItem(index, true);
+			MovieView.Items[index].Selected = true;
 		}
 
 		private void ScanFiles()
 		{
 			_movieList.Clear();
-			MovieView.ItemCount = 0;
+			MovieView.VirtualListSize = 0;
 			MovieView.Update();
 
 			var directory = PathManager.MakeAbsolutePath(Global.Config.PathEntries.MoviesPathFragment, null);
@@ -249,7 +231,7 @@ namespace BizHawk.Client.EmuHawk
 			var dpTodo = new Queue<string>();
 			var fpTodo = new List<string>();
 			dpTodo.Enqueue(directory);
-			Dictionary<string, int> ordinals = new Dictionary<string, int>();
+			var ordinals = new Dictionary<string, int>();
 
 			while (dpTodo.Count > 0)
 			{
@@ -258,9 +240,9 @@ namespace BizHawk.Client.EmuHawk
 				// enqueue subdirectories if appropriate
 				if (Global.Config.PlayMovie_IncludeSubdir)
 				{
-					foreach (var subdir in Directory.GetDirectories(dp))
+					foreach (var subDir in Directory.GetDirectories(dp))
 					{
-						dpTodo.Enqueue(subdir);
+						dpTodo.Enqueue(subDir);
 					}
 				}
 
@@ -293,7 +275,7 @@ namespace BizHawk.Client.EmuHawk
 
 		void RefreshMovieList()
 		{
-			MovieView.ItemCount = _movieList.Count;
+			MovieView.VirtualListSize = _movieList.Count;
 			UpdateList();
 		}
 
@@ -306,10 +288,10 @@ namespace BizHawk.Client.EmuHawk
 		{
 			var filePaths = (string[])e.Data.GetData(DataFormats.FileDrop);
 
-			filePaths
-				.Where(path => MovieService.MovieExtensions.Contains(Path.GetExtension(path).Replace(".", "")))
-				.ToList()
-				.ForEach(path => AddMovieToList(path, force: true));
+			foreach (var path in filePaths.Where(path => MovieService.MovieExtensions.Contains(Path.GetExtension(path)?.Replace(".", ""))))
+			{
+				AddMovieToList(path, force: true);
+			}
 
 			RefreshMovieList();
 		}
@@ -328,9 +310,10 @@ namespace BizHawk.Client.EmuHawk
 							.Append(_movieList[index].Filename).Append('\t')
 							.Append(_movieList[index].SystemID).Append('\t')
 							.Append(_movieList[index].GameName).Append('\t')
-							.Append(PlatformFrameRates.MovieTime(_movieList[index]).ToString(@"hh\:mm\:ss\.fff"))
+							.Append(_platformFrameRates.MovieTime(_movieList[index]).ToString(@"hh\:mm\:ss\.fff"))
 							.AppendLine();
 					}
+
 					Clipboard.SetDataObject(copyStr.ToString());
 				}
 			}
@@ -403,14 +386,12 @@ namespace BizHawk.Client.EmuHawk
 			OK.Enabled = true;
 
 			var firstIndex = MovieView.SelectedIndices[0];
-			MovieView.ensureVisible(firstIndex);
+			MovieView.EnsureVisible(firstIndex);
 
 			foreach (var kvp in _movieList[firstIndex].HeaderEntries)
 			{
 				var item = new ListViewItem(kvp.Key);
 				item.SubItems.Add(kvp.Value);
-
-				bool add = true;
 
 				switch (kvp.Key)
 				{
@@ -433,7 +414,7 @@ namespace BizHawk.Client.EmuHawk
 						// the problem is that for GameGear and SG100, those mismatch, resulting in false positive here
 						// I have a patch to make GG and SG appear as platforms in movie header (issue #1246)
 						// but even with it, for all the old movies, this false positive would have to be worked around anyway
-						// TODO: actually check header flags like "IsGGMode" and "IsSegaCDMode" (those are never parsed by bizhawk)
+						// TODO: actually check header flags like "IsGGMode" and "IsSegaCDMode" (those are never parsed by BizHawk)
 						if (kvp.Value != Global.Emulator.SystemId)
 						{
 							item.BackColor = Color.Pink;
@@ -441,17 +422,16 @@ namespace BizHawk.Client.EmuHawk
 						break;
 				}
 
-				if(add)
-					DetailsView.Items.Add(item);
+				DetailsView.Items.Add(item);
 			}
 
-			var FpsItem = new ListViewItem("Fps");
-			FpsItem.SubItems.Add($"{Fps(_movieList[firstIndex]):0.#######}");
-			DetailsView.Items.Add(FpsItem);
+			var fpsItem = new ListViewItem("Fps");
+			fpsItem.SubItems.Add($"{Fps(_movieList[firstIndex]):0.#######}");
+			DetailsView.Items.Add(fpsItem);
 
-			var FramesItem = new ListViewItem("Frames");
-			FramesItem.SubItems.Add(_movieList[firstIndex].FrameCount.ToString());
-			DetailsView.Items.Add(FramesItem);
+			var framesItem = new ListViewItem("Frames");
+			framesItem.SubItems.Add(_movieList[firstIndex].FrameCount.ToString());
+			DetailsView.Items.Add(framesItem);
 			CommentsBtn.Enabled = _movieList[firstIndex].Comments.Any();
 			SubtitlesBtn.Enabled = _movieList[firstIndex].Subtitles.Any();
 		}
@@ -459,8 +439,8 @@ namespace BizHawk.Client.EmuHawk
 		public double Fps(IMovie movie)
 		{
 			var system = movie.HeaderEntries[HeaderKeys.PLATFORM];
-			var pal = movie.HeaderEntries.ContainsKey(HeaderKeys.PAL) &&
-					movie.HeaderEntries[HeaderKeys.PAL] == "1";
+			var pal = movie.HeaderEntries.ContainsKey(HeaderKeys.PAL)
+				&& movie.HeaderEntries[HeaderKeys.PAL] == "1";
 
 			return new PlatformFrameRates()[system, pal];
 			
@@ -468,11 +448,11 @@ namespace BizHawk.Client.EmuHawk
 
 		private void EditMenuItem_Click(object sender, EventArgs e)
 		{
-			MovieView.SelectedIndices
-				.Cast<int>()
-				.Select(index => _movieList[index])
-				.ToList()
-				.ForEach(movie => System.Diagnostics.Process.Start(movie.Filename));
+			foreach (var movie in MovieView.SelectedIndices.Cast<int>()
+				.Select(index => _movieList[index]))
+			{
+				System.Diagnostics.Process.Start(movie.Filename);
+			}
 		}
 
 		#endregion
@@ -573,7 +553,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private void BrowseMovies_Click(object sender, EventArgs e)
 		{
-			var ofd = new OpenFileDialog
+			using var ofd = new OpenFileDialog
 			{
 				Filter = $"Movie Files (*.{MovieService.DefaultExtension})|*.{MovieService.DefaultExtension}|TAS project Files (*.{TasMovie.Extension})|*.{TasMovie.Extension}|All Files|*.*",
 				InitialDirectory = PathManager.MakeAbsolutePath(Global.Config.PathEntries.MoviesPathFragment, null)
@@ -593,8 +573,7 @@ namespace BizHawk.Client.EmuHawk
 				if (index.HasValue)
 				{
 					MovieView.SelectedIndices.Clear();
-					MovieView.setSelection(index.Value);
-					MovieView.SelectItem(index.Value, true);
+					MovieView.Items[index.Value].Selected = true;
 				}
 			}
 		}
@@ -628,14 +607,9 @@ namespace BizHawk.Client.EmuHawk
 			if (StopOnFrameCheckbox.Checked && 
 				(StopOnFrameTextBox.ToRawInt().HasValue || LastFrameCheckbox.Checked))
 			{
-				if (LastFrameCheckbox.Checked)
-				{
-					GlobalWin.MainForm.PauseOnFrame = Global.MovieSession.Movie.InputLogLength;
-				}
-				else
-				{
-					GlobalWin.MainForm.PauseOnFrame = StopOnFrameTextBox.ToRawInt();
-				}
+				GlobalWin.MainForm.PauseOnFrame = LastFrameCheckbox.Checked
+					? Global.MovieSession.Movie.InputLogLength
+					: StopOnFrameTextBox.ToRawInt();
 			}
 
 			Close();
@@ -648,7 +622,7 @@ namespace BizHawk.Client.EmuHawk
 
 		#endregion
 
-		private bool _programmaticallyChangingStopFrameCheckbox = false;
+		private bool _programmaticallyChangingStopFrameCheckbox;
 		private void StopOnFrameCheckbox_CheckedChanged(object sender, EventArgs e)
 		{
 			if (!_programmaticallyChangingStopFrameCheckbox)
@@ -666,7 +640,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private void LastFrameCheckbox_CheckedChanged(object sender, EventArgs e)
 		{
-			if (LastFrameCheckbox.Checked == true)
+			if (LastFrameCheckbox.Checked)
 			{
 				_programmaticallyChangingStopFrameCheckbox = true;
 				StopOnFrameCheckbox.Checked = true;

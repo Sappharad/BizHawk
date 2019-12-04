@@ -44,7 +44,7 @@ namespace BizHawk.Client.EmuHawk
 			rbOpenGL.Checked = Global.Config.DispMethod == Config.EDispMethod.OpenGL;
 			rbGDIPlus.Checked = Global.Config.DispMethod == Config.EDispMethod.GdiPlus;
 			rbD3D9.Checked = Global.Config.DispMethod == Config.EDispMethod.SlimDX9;
-			rbVulkan.Checked = Global.Config.DispMethod == Config.EDispMethod.Vulkan;
+			//rbVulkan.Checked = Global.Config.DispMethod == Config.EDispMethod.Vulkan;
 
 			cbStatusBarWindowed.Checked = Global.Config.DispChrome_StatusBarWindowed;
 			cbCaptionWindowed.Checked = Global.Config.DispChrome_CaptionWindowed;
@@ -89,9 +89,9 @@ namespace BizHawk.Client.EmuHawk
 
 			RefreshAspectRatioOptions();
 
-			if (OSTailoredCode.CurrentOS != OSTailoredCode.DistinctOS.Windows)
+			if (OSTailoredCode.IsUnixHost)
 			{
-				// no slimdx
+				// Disable SlimDX on Unix
 				rbD3D9.Enabled = false;
 				rbD3D9.AutoCheck = false;
 				cbAlternateVsync.Enabled = false;
@@ -190,8 +190,8 @@ namespace BizHawk.Client.EmuHawk
 				Global.Config.DispMethod = Config.EDispMethod.GdiPlus;
 			if(rbD3D9.Checked)
 				Global.Config.DispMethod = Config.EDispMethod.SlimDX9;
-			if (rbVulkan.Checked)
-				Global.Config.DispMethod = Config.EDispMethod.Vulkan;
+			/*if (rbVulkan.Checked)
+				Global.Config.DispMethod = Config.EDispMethod.Vulkan;*/
 
 			int.TryParse(txtCropLeft.Text, out Global.Config.DispCropLeft);
 			int.TryParse(txtCropTop.Text, out Global.Config.DispCropTop);
@@ -215,7 +215,7 @@ namespace BizHawk.Client.EmuHawk
 
 		private void btnSelectUserFilter_Click(object sender, EventArgs e)
 		{
-			var ofd = new OpenFileDialog();
+			using var ofd = new OpenFileDialog();
 			ofd.Filter = ".CGP (*.cgp)|*.cgp";
 			ofd.FileName = PathSelection;
 			if (ofd.ShowDialog() == DialogResult.OK)
@@ -245,7 +245,8 @@ namespace BizHawk.Client.EmuHawk
 					catch {}
 					if (!ok)
 					{
-						new ExceptionBox(errors).ShowDialog();
+						using var errorForm = new ExceptionBox(errors);
+						errorForm.ShowDialog();
 						return;
 					}
 				}

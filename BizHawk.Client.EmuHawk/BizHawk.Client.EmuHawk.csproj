@@ -1,5 +1,7 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\DotNetBuild.Common.targets" Condition=" '$(OS)' != 'Windows_NT' " />
+  <Import Project="..\DotNetBuild.Resources.targets" Condition="'$(MSBuildRuntimeType)' == 'Core'" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -38,14 +40,15 @@
     <BootstrapperEnabled>true</BootstrapperEnabled>
     <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <LangVersion>8.0</LangVersion>
   </PropertyGroup>
   <PropertyGroup>
-    <NoWin32Manifest>true</NoWin32Manifest>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
     <DebugSymbols>true</DebugSymbols>
     <OutputPath>..\output\</OutputPath>
-    <DefineConstants>DEBUG;WINDOWS;EXE_PROJECT</DefineConstants>
+    <DefineConstants>DEBUG;EXE_PROJECT</DefineConstants>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DebugType>full</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -56,7 +59,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
     <OutputPath>..\output\</OutputPath>
-    <DefineConstants>WINDOWS;EXE_PROJECT</DefineConstants>
+    <DefineConstants>EXE_PROJECT</DefineConstants>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
@@ -566,6 +569,8 @@
     <Compile Include="CoreFeatureAnalysis.Designer.cs">
       <DependentUpon>CoreFeatureAnalysis.cs</DependentUpon>
     </Compile>
+    <Compile Include="CustomControls\ControlRenderer\GdiPlusRenderer.cs" />
+    <Compile Include="CustomControls\ControlRenderer\IControlRenderer.cs" />
     <Compile Include="CustomControls\ExceptionBox.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -575,31 +580,20 @@
     <Compile Include="CustomControls\FolderBrowserDialogEx.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="CustomControls\GDI.cs" />
     <Compile Include="CustomControls\HexTextBox.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="CustomControls\HexView.cs">
+    <Compile Include="CustomControls\InputRoll\Cell.cs" />
+    <Compile Include="CustomControls\InputRoll\ColumnType.cs" />
+    <Compile Include="CustomControls\InputRoll\InputRoll.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="CustomControls\InputConfigBase.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="CustomControls\InputRoll.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="CustomControls\InputRoll.Drawing.cs">
+    <Compile Include="CustomControls\InputRoll\InputRoll.Drawing.cs">
       <DependentUpon>InputRoll.cs</DependentUpon>
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="CustomControls\InputRoll.Drawing.GDI.cs">
-      <DependentUpon>InputRoll.cs</DependentUpon>
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="CustomControls\InputRoll.Drawing.GDIP.cs">
-      <DependentUpon>InputRoll.cs</DependentUpon>
-      <SubType>Component</SubType>
-    </Compile>
+    <Compile Include="CustomControls\InputRoll\RollColumn.cs" />
+    <Compile Include="CustomControls\InputRoll\RollColumns.cs" />
     <Compile Include="CustomControls\MenuButton.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -642,28 +636,10 @@
     <Compile Include="CustomControls\PrereqsAlert.Designer.cs">
       <DependentUpon>PrereqsAlert.cs</DependentUpon>
     </Compile>
-    <Compile Include="CustomControls\QuickProgressPopup.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="CustomControls\QuickProgressPopup.Designer.cs">
-      <DependentUpon>QuickProgressPopup.cs</DependentUpon>
-    </Compile>
     <Compile Include="CustomControls\RepeatButton.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="CustomControls\TransparentTrackbar.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="CustomControls\ReadonlyCheckbox.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="CustomControls\SmartTextBoxControl.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="CustomControls\TasListView.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="CustomControls\TextDebugView.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="CustomControls\ToolStripEx.cs">
@@ -672,9 +648,7 @@
     <Compile Include="CustomControls\ViewportPanel.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="CustomControls\VirtualListView.cs" />
     <Compile Include="CustomControls\Win32.cs" />
-    <Compile Include="CustomControls\Win32GDIRenderer.cs" />
     <Compile Include="DisplayManager\DisplayManager.cs" />
     <Compile Include="DisplayManager\DisplaySurface.cs" />
     <Compile Include="DisplayManager\FilterManager.cs" />
@@ -686,9 +660,11 @@
     <Compile Include="DisplayManager\RenderTargetFrugalizer.cs" />
     <Compile Include="DisplayManager\SwappableDisplaySurfaceSet.cs" />
     <Compile Include="DisplayManager\TextureFrugalizer.cs" />
+    <Compile Include="EmuHawkUtil.cs" />
     <Compile Include="Extensions\ControlExtensions.cs" />
     <Compile Include="Extensions\CoreExtensions.cs" />
     <Compile Include="Extensions\ToolExtensions.cs" />
+    <Compile Include="FileFilterEntry.cs" />
     <Compile Include="FileLoader.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -705,6 +681,7 @@
     <Compile Include="Input\GamePad.cs" />
     <Compile Include="Input\GamePad360.cs" />
     <Compile Include="Input\Input.cs" />
+    <Compile Include="Input\KeyboardMapping.cs" />
     <Compile Include="Input\OTK_Gamepad.cs" />
     <Compile Include="Input\OTK_Keyboard.cs" />
     <Compile Include="IControlMainform.cs" />
@@ -815,12 +792,6 @@
     <Compile Include="Sound\Utilities\SoundOutputProvider.cs" />
     <Compile Include="Throttle.cs" />
     <Compile Include="ToolAttribute.cs" />
-    <Compile Include="tools\AutoHawk.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="tools\AutoHawk.Designer.cs">
-      <DependentUpon>AutoHawk.cs</DependentUpon>
-    </Compile>
     <Compile Include="tools\BasicBot\BasicBot.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -973,12 +944,6 @@
     <Compile Include="tools\HexEditor\HexFind.Designer.cs">
       <DependentUpon>HexFind.cs</DependentUpon>
     </Compile>
-    <Compile Include="tools\HexEditor\NewHexEditor.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="tools\HexEditor\NewHexEditor.Designer.cs">
-      <DependentUpon>NewHexEditor.cs</DependentUpon>
-    </Compile>
     <Compile Include="tools\Lua\Libraries\EmuLuaLibrary.Client.cs" />
     <Compile Include="tools\Lua\Libraries\EmuLuaLibrary.Communication.cs" />
     <Compile Include="tools\Lua\Libraries\EmuLuaLibrary.Console.cs" />
@@ -1035,9 +1000,6 @@
     </Compile>
     <Compile Include="tools\Lua\LuaWinform.Designer.cs">
       <DependentUpon>LuaWinform.cs</DependentUpon>
-    </Compile>
-    <Compile Include="tools\Lua\SyncTextBox.cs">
-      <SubType>Component</SubType>
     </Compile>
     <Compile Include="tools\Macros\MacroInput.ButtonSelect.cs">
       <SubType>Form</SubType>
@@ -1288,6 +1250,7 @@
     <Compile Include="tools\VirtualPads\schema\AppleIISchema.cs" />
     <Compile Include="tools\VirtualPads\schema\C64Schema.cs" />
     <Compile Include="tools\VirtualPads\schema\ColecoSchema.cs" />
+    <Compile Include="tools\VirtualPads\schema\O2Schema .cs" />
     <Compile Include="tools\VirtualPads\schema\VECSchema.cs" />
     <Compile Include="tools\VirtualPads\schema\GGLSchema.cs" />
     <Compile Include="tools\VirtualPads\schema\DualGBSchema.cs" />
@@ -1542,20 +1505,11 @@
     <EmbeddedResource Include="CustomControls\ExceptionBox.resx">
       <DependentUpon>ExceptionBox.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="CustomControls\InputConfigBase.resx">
-      <DependentUpon>InputConfigBase.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="CustomControls\MsgBox.resx">
       <DependentUpon>MsgBox.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="CustomControls\PrereqsAlert.resx">
       <DependentUpon>PrereqsAlert.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="CustomControls\QuickProgressPopup.resx">
-      <DependentUpon>QuickProgressPopup.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="CustomControls\TasListView.resx">
-      <DependentUpon>TasListView.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>
@@ -1584,9 +1538,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="RomStatusPicker.resx">
       <DependentUpon>RomStatusPicker.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="tools\AutoHawk.resx">
-      <DependentUpon>AutoHawk.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="tools\BasicBot\BasicBot.resx">
       <DependentUpon>BasicBot.cs</DependentUpon>
@@ -1657,9 +1608,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="tools\HexEditor\HexFind.resx">
       <DependentUpon>HexFind.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="tools\HexEditor\NewHexEditor.resx">
-      <DependentUpon>NewHexEditor.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="tools\Lua\LuaCanvas.resx">
       <DependentUpon>LuaCanvas.cs</DependentUpon>
@@ -1904,6 +1852,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
+    <None Include="app.manifest" />
     <None Include="images\FindHS.png" />
   </ItemGroup>
   <ItemGroup>
@@ -1931,6 +1880,8 @@
     <None Include="config\ControllerImages\GENController.png" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="images\StopButton.png" />
+    <None Include="images\mame.png" />
     <None Include="Resources\MoveTop.png" />
     <None Include="Resources\MoveBottom.png" />
     <None Include="Resources\MoveTop.bmp" />
@@ -2260,6 +2211,7 @@
     <None Include="images\ESE.png" />
     <None Include="images\ControllerImages\NGPController.png" />
     <Content Include="config\ControllerImages\ZXSpectrumKeyboards.png" />
+    <None Include="images\ControllerImages\ArcadeController.jpg" />
     <Content Include="images\logo.ico" />
     <None Include="images\Paste.png" />
     <None Include="images\reboot.png" />

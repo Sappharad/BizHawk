@@ -6,6 +6,7 @@ using System.Windows.Forms;
 
 using BizHawk.Client.Common;
 using BizHawk.Client.EmuHawk.WinFormExtensions;
+using BizHawk.Common;
 
 namespace BizHawk.Client.EmuHawk
 {
@@ -114,8 +115,7 @@ namespace BizHawk.Client.EmuHawk
 				var paths = pathCollection
 					.Where(p => p.System == systemId)
 					.OrderBy(p => p.Ordinal)
-					.ThenBy(p => p.Type)
-					.ToList();
+					.ThenBy(p => p.Type);
 
 				var y = UIHelper.ScaleY(14);
 				foreach (var path in paths)
@@ -174,7 +174,7 @@ namespace BizHawk.Client.EmuHawk
 								return;
 							}
 
-							var f = new FirmwaresConfig { TargetSystem = "Global" };
+							using var f = new FirmwaresConfig { TargetSystem = "Global" };
 							f.ShowDialog(this);
 						};
 
@@ -218,14 +218,14 @@ namespace BizHawk.Client.EmuHawk
 				system = null;
 			}
 
-			DialogResult result = new DialogResult();
-			string selectedPath = "";
-
-			if (BizHawk.Common.OSTailoredCode.CurrentOS == BizHawk.Common.OSTailoredCode.DistinctOS.Windows)
+			DialogResult result;
+			string selectedPath;
+			if (OSTailoredCode.IsUnixHost)
 			{
-				var f = new FolderBrowserEx
+				// FolderBrowserEx doesn't work in Mono for obvious reasons
+				using var f = new FolderBrowserDialog
 				{
-					Description = "Set the directory for " + name,
+					Description = $"Set the directory for {name}",
 					SelectedPath = PathManager.MakeAbsolutePath(box.Text, system)
 				};
 				result = f.ShowDialog();
@@ -233,18 +233,14 @@ namespace BizHawk.Client.EmuHawk
 			}
 			else
 			{
-				// mono does not like FolderBrowserEx because of its managed calls
-				// do standard winforms on *nix
-				var f = new FolderBrowserDialog
+				using var f = new FolderBrowserEx
 				{
-					Description = "Set the directory for " + name,
+					Description = $"Set the directory for {name}",
 					SelectedPath = PathManager.MakeAbsolutePath(box.Text, system)
 				};
 				result = f.ShowDialog();
 				selectedPath = f.SelectedPath;
 			}
-
-
 			if (result == DialogResult.OK)
 			{
 				box.Text = PathManager.TryMakeRelative(selectedPath, system);
@@ -264,10 +260,10 @@ namespace BizHawk.Client.EmuHawk
 
 		private void DoRomToggle()
 		{
-			AllPathControls
-				.Where(c => c.Name == "ROM")
-				.ToList()
-				.ForEach(control => control.Enabled = !RecentForROMs.Checked);
+			foreach (var control in AllPathControls.Where(c => c.Name == "ROM"))
+			{
+				control.Enabled = !RecentForROMs.Checked;
+			}
 		}
 
 		private IEnumerable<TextBox> AllPathBoxes

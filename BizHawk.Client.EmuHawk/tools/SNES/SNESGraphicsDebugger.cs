@@ -40,9 +40,9 @@ namespace BizHawk.Client.EmuHawk
 {
 	public unsafe partial class SNESGraphicsDebugger : Form, IToolFormAutoConfig
 	{
-		List<DisplayTypeItem> displayTypeItems = new List<DisplayTypeItem>();
+		readonly List<DisplayTypeItem> displayTypeItems = new List<DisplayTypeItem>();
 
-		public bool UpdateBefore { get { return false; } }
+		public bool UpdateBefore => false;
 		public bool AskSaveChanges() { return true; }
 
 		[RequiredService]
@@ -51,8 +51,8 @@ namespace BizHawk.Client.EmuHawk
 		[ConfigPersist]
 		public bool UseUserBackdropColor
 		{
-			get { return checkBackdropColor.Checked; }
-			set { checkBackdropColor.Checked = value; }
+			get => checkBackdropColor.Checked;
+			set => checkBackdropColor.Checked = value;
 		}
 		[ConfigPersist]
 		public int UserBackdropColor { get; set; }
@@ -116,8 +116,7 @@ namespace BizHawk.Client.EmuHawk
 		protected override void OnClosed(EventArgs e)
 		{
 			base.OnClosed(e);
-			if (currentSnesCore != null)
-				currentSnesCore.ScanlineHookManager.Unregister(this);
+			currentSnesCore?.ScanlineHookManager.Unregister(this);
 			currentSnesCore = null;
 		}
 
@@ -224,7 +223,7 @@ namespace BizHawk.Client.EmuHawk
 
 		void RegenerateData()
 		{
-			if (gd != null) gd.Dispose();
+			gd?.Dispose();
 			gd = null;
 			if (currentSnesCore == null) return;
 			gd = NewDecoder();
@@ -307,12 +306,11 @@ namespace BizHawk.Client.EmuHawk
 				checkTMBG2.Checked = si.BG.BG2.MainEnabled;
 				checkTMBG3.Checked = si.BG.BG3.MainEnabled;
 				checkTMBG4.Checked = si.BG.BG4.MainEnabled;
-				checkTMOBJ.Checked = si.OBJ_SubEnabled;
+				checkTSOBJ.Checked = si.OBJ_SubEnabled;
 				checkTSBG1.Checked = si.BG.BG1.SubEnabled;
 				checkTSBG2.Checked = si.BG.BG2.SubEnabled;
 				checkTSBG3.Checked = si.BG.BG3.SubEnabled;
 				checkTSBG4.Checked = si.BG.BG4.SubEnabled;
-				checkTSOBJ.Checked = si.OBJ_MainEnabled;
 				checkMathOBJ.Checked = si.OBJ_MathEnabled;
 				checkMathBK.Checked = si.BK_MathEnabled;
 				checkMathBG1.Checked = si.BG.BG1.MathEnabled;
@@ -346,7 +344,7 @@ namespace BizHawk.Client.EmuHawk
 			}
 		}
 
-		eDisplayType CurrDisplaySelection { get { return (comboDisplayType.SelectedValue as eDisplayType?).Value; } }
+		eDisplayType CurrDisplaySelection => (comboDisplayType.SelectedValue as eDisplayType?).Value;
 
 		//todo - something smarter to cycle through bitmaps without repeatedly trashing them (use the dispose callback on the viewer)
 		private void RenderView()
@@ -528,8 +526,8 @@ namespace BizHawk.Client.EmuHawk
 
 		class PaletteTypeItem
 		{
-			public SnesColors.ColorType Type { get; private set; }
-			public string Descr { get; private set; }
+			public SnesColors.ColorType Type { get; }
+			public string Descr { get; }
 			public PaletteTypeItem(string descr, SnesColors.ColorType type)
 			{
 				Type = type;

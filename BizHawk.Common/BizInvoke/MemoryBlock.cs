@@ -4,297 +4,225 @@ using System.IO;
 
 namespace BizHawk.Common.BizInvoke
 {
-	public abstract class MemoryBlock : IDisposable
+	public sealed class MemoryBlock : MemoryBlockBase
 	{
 		/// <summary>
-		/// starting address of the memory block
+		/// handle returned by CreateFileMapping
 		/// </summary>
-		public ulong Start { get; protected set; }
-		/// <summary>
-		/// total size of the memory block
-		/// </summary>
-		public ulong Size { get; protected set; }
-		/// <summary>
-		/// ending address of the memory block; equal to start + size
-		/// </summary>
-		public ulong End { get; protected set; }
+		private IntPtr _handle;
 
 		/// <summary>
-		/// true if this is currently swapped in
+		/// allocate size bytes starting at a particular address
 		/// </summary>
-		public bool Active { get; protected set; }
-
-		/// <summary>
-		/// stores last set memory protection value for each page
-		/// </summary>
-		protected Protection[] _pageData;
-
-		/// <summary>
-		/// snapshot for XOR buffer
-		/// </summary>
-		protected byte[] _snapshot;
-
-		public byte[] XorHash { get; protected set; }
-
-		/// <summary>
-		/// get a page index within the block
-		/// </summary>
-		protected int GetPage(ulong addr)
+		public MemoryBlock(ulong start, ulong size) : base(start, size)
 		{
-			if (addr < Start || addr >= End) throw new ArgumentOutOfRangeException();
-			return (int)((addr - Start) >> WaterboxUtils.PageShift);
+			_handle = Kernel32.CreateFileMapping(
+				Kernel32.INVALID_HANDLE_VALUE,
+				IntPtr.Zero,
+				Kernel32.FileMapProtection.PageExecuteReadWrite | Kernel32.FileMapProtection.SectionCommit,
+				(uint)(Size >> 32),
+				(uint)Size,
+				null
+			);
+			if (_handle == IntPtr.Zero) throw new InvalidOperationException($"{nameof(Kernel32.CreateFileMapping)}() returned NULL");
 		}
 
-		/// <summary>
-		/// get a start address for a page index within the block
-		/// </summary>
-		protected ulong GetStartAddr(int page)
+		public override void Activate()
 		{
-			return ((ulong)page << WaterboxUtils.PageShift) + Start;
+			if (Active)
+				throw new InvalidOperationException("Already active");
+			if (Kernel32.MapViewOfFileEx(_handle, Kernel32.FileMapAccessType.Read | Kernel32.FileMapAccessType.Write | Kernel32.FileMapAccessType.Execute,
+				0, 0, Z.UU(Size), Z.US(Start)) != Z.US(Start))
+			{
+				throw new InvalidOperationException($"{nameof(Kernel32.MapViewOfFileEx)}() returned NULL");
+			}
+			ProtectAll();
+			Active = true;
 		}
 
-		/// <summary>
-		/// activate the memory block, swapping it in at the specified address
-		/// </summary>
-		public abstract void Activate();
-
-		/// <summary>
-		/// deactivate the memory block, removing it from RAM but leaving it immediately available to swap back in
-		/// </summary>
-		public abstract void Deactivate();
-
-		/// <summary>
-		/// Memory protection constant
-		/// </summary>
-		public enum Protection : byte
+		public override void Deactivate()
 		{
-			None, R, RW, RX
+			if (!Active)
+				throw new InvalidOperationException("Not active");
+			if (!Kernel32.UnmapViewOfFile(Z.US(Start)))
+				throw new InvalidOperationException($"{nameof(Kernel32.UnmapViewOfFile)}() returned NULL");
+			Active = false;
 		}
 
-		/// <summary>
-		/// Get a stream that can be used to read or write from part of the block. Does not check for or change Protect()!
-		/// </summary>
-		public Stream GetStream(ulong start, ulong length, bool writer)
+		public override void SaveXorSnapshot()
 		{
-			if (start < Start) throw new ArgumentOutOfRangeException(nameof(start));
-			if (start + length > End) throw new ArgumentOutOfRangeException(nameof(length));
-			return new MemoryViewStream(!writer, writer, (long)start, (long)length, this);
+			if (_snapshot != null)
+				throw new InvalidOperationException("Snapshot already taken");
+			if (!Active)
+				throw new InvalidOperationException("Not active");
+
+			// temporarily switch the entire block to `R`: in case some areas are unreadable, we don't want
+			// that to complicate things
+			Kernel32.MemoryProtection old;
+			if (!Kernel32.VirtualProtect(Z.UU(Start), Z.UU(Size), Kernel32.MemoryProtection.READONLY, out old))
+				throw new InvalidOperationException($"{nameof(Kernel32.VirtualProtect)}() returned FALSE!");
+
+			_snapshot = new byte[Size];
+			var ds = new MemoryStream(_snapshot, true);
+			var ss = GetStream(Start, Size, false);
+			ss.CopyTo(ds);
+			XorHash = WaterboxUtils.Hash(_snapshot);
+
+			ProtectAll();
 		}
 
-		/// <summary>
-		/// get a stream that can be used to read or write from part of the block.
-		/// both reads and writes will be XORed against an earlier recorded snapshot
-		/// </summary>
-		public Stream GetXorStream(ulong start, ulong length, bool writer)
+		public override byte[] FullHash()
 		{
-			if (start < Start) throw new ArgumentOutOfRangeException(nameof(start));
-			if (start + length > End) throw new ArgumentOutOfRangeException(nameof(length));
-			if (_snapshot == null) throw new InvalidOperationException("No snapshot taken!");
-			return new MemoryViewXorStream(!writer, writer, (long)start, (long)length, this, _snapshot, (long)(start - Start));
+			if (!Active)
+				throw new InvalidOperationException("Not active");
+			// temporarily switch the entire block to `R`
+			Kernel32.MemoryProtection old;
+			if (!Kernel32.VirtualProtect(Z.UU(Start), Z.UU(Size), Kernel32.MemoryProtection.READONLY, out old))
+				throw new InvalidOperationException($"{nameof(Kernel32.VirtualProtect)}() returned FALSE!");
+			var ret = WaterboxUtils.Hash(GetStream(Start, Size, false));
+			ProtectAll();
+			return ret;
 		}
 
-		/// <summary>
-		/// take a snapshot of the entire memory block's contents, for use in GetXorStream
-		/// </summary>
-		public abstract void SaveXorSnapshot();
-
-		/// <summary>
-		/// take a hash of the current full contents of the block, including unreadable areas
-		/// </summary>
-		public abstract byte[] FullHash();
-
-		/// <summary>
-		/// restore all recorded protections
-		/// </summary>
-		protected abstract void ProtectAll();
-
-		/// <summary>
-		/// set r/w/x protection on a portion of memory. rounded to encompassing pages
-		/// </summary>
-		public abstract void Protect(ulong start, ulong length, Protection prot);
-
-		public void Dispose()
+		private static Kernel32.MemoryProtection GetKernelMemoryProtectionValue(Protection prot)
 		{
-			Dispose(true);
-			GC.SuppressFinalize(this);
+			Kernel32.MemoryProtection p;
+			switch (prot)
+			{
+				case Protection.None: p = Kernel32.MemoryProtection.NOACCESS; break;
+				case Protection.R: p = Kernel32.MemoryProtection.READONLY; break;
+				case Protection.RW: p = Kernel32.MemoryProtection.READWRITE; break;
+				case Protection.RX: p = Kernel32.MemoryProtection.EXECUTE_READ; break;
+				default: throw new ArgumentOutOfRangeException(nameof(prot));
+			}
+			return p;
 		}
 
-		protected abstract void Dispose(bool disposing);
+		protected override void ProtectAll()
+		{
+			int ps = 0;
+			for (int i = 0; i < _pageData.Length; i++)
+			{
+				if (i == _pageData.Length - 1 || _pageData[i] != _pageData[i + 1])
+				{
+					var p = GetKernelMemoryProtectionValue(_pageData[i]);
+					ulong zstart = GetStartAddr(ps);
+					ulong zend = GetStartAddr(i + 1);
+					Kernel32.MemoryProtection old;
+					if (!Kernel32.VirtualProtect(Z.UU(zstart), Z.UU(zend - zstart), p, out old))
+						throw new InvalidOperationException($"{nameof(Kernel32.VirtualProtect)}() returned FALSE!");
+					ps = i + 1;
+				}
+			}
+		}
+
+		public override void Protect(ulong start, ulong length, Protection prot)
+		{
+			if (length == 0)
+				return;
+			int pstart = GetPage(start);
+			int pend = GetPage(start + length - 1);
+
+			var p = GetKernelMemoryProtectionValue(prot);
+			for (int i = pstart; i <= pend; i++)
+				_pageData[i] = prot; // also store the value for later use
+
+			if (Active) // it's legal to Protect() if we're not active; the information is just saved for the next activation
+			{
+				var computedStart = WaterboxUtils.AlignDown(start);
+				var computedEnd = WaterboxUtils.AlignUp(start + length);
+				var computedLength = computedEnd - computedStart;
+
+				Kernel32.MemoryProtection old;
+				if (!Kernel32.VirtualProtect(Z.UU(computedStart),
+					Z.UU(computedLength), p, out old))
+					throw new InvalidOperationException($"{nameof(Kernel32.VirtualProtect)}() returned FALSE!");
+			}
+		}
+
+		public override void Dispose(bool disposing)
+		{
+			if (_handle != IntPtr.Zero)
+			{
+				if (Active)
+					Deactivate();
+				Kernel32.CloseHandle(_handle);
+				_handle = IntPtr.Zero;
+			}
+		}
 
 		~MemoryBlock()
 		{
 			Dispose(false);
 		}
 
-		/// <summary>
-		/// allocate size bytes at any address
-		/// </summary>
-		public static MemoryBlock PlatformConstructor(ulong size)
+		private static class Kernel32
 		{
-			return PlatformConstructor(0, size);
-		}
+			[DllImport("kernel32.dll", SetLastError = true)]
+			public static extern bool VirtualProtect(UIntPtr lpAddress, UIntPtr dwSize,
+			   MemoryProtection flNewProtect, out MemoryProtection lpflOldProtect);
 
-		/// <summary>
-		/// allocate size bytes starting at a particular address
-		/// </summary>
-		public static MemoryBlock PlatformConstructor(ulong start, ulong size)
-		{
-			switch (OSTailoredCode.CurrentOS)
+			[Flags]
+			public enum MemoryProtection : uint
 			{
-				case OSTailoredCode.DistinctOS.Linux:
-				case OSTailoredCode.DistinctOS.macOS:
-					//					return new MemoryBlockUnix(start, size);
-					throw new InvalidOperationException("ctor of nonfunctional MemoryBlockUnix class");
-				case OSTailoredCode.DistinctOS.Windows:
-					return new MemoryBlockWin32(start, size);
-				default:
-					throw new ArgumentOutOfRangeException();
-			}
-		}
-
-		private class MemoryViewStream : Stream
-		{
-			public MemoryViewStream(bool readable, bool writable, long ptr, long length, MemoryBlock owner)
-			{
-				_readable = readable;
-				_writable = writable;
-				_ptr = ptr;
-				_length = length;
-				_owner = owner;
-				_pos = 0;
+				EXECUTE = 0x10,
+				EXECUTE_READ = 0x20,
+				EXECUTE_READWRITE = 0x40,
+				EXECUTE_WRITECOPY = 0x80,
+				NOACCESS = 0x01,
+				READONLY = 0x02,
+				READWRITE = 0x04,
+				WRITECOPY = 0x08,
+				GUARD_Modifierflag = 0x100,
+				NOCACHE_Modifierflag = 0x200,
+				WRITECOMBINE_Modifierflag = 0x400
 			}
 
-			private void EnsureNotDisposed()
+			[DllImport("kernel32.dll", SetLastError = true)]
+			public static extern IntPtr CreateFileMapping(
+				IntPtr hFile,
+				IntPtr lpFileMappingAttributes,
+				FileMapProtection flProtect,
+				uint dwMaximumSizeHigh,
+				uint dwMaximumSizeLow,
+				string lpName);
+
+			[Flags]
+			public enum FileMapProtection : uint
 			{
-				if (_owner.Start == 0) throw new ObjectDisposedException("MemoryBlock");
+				PageReadonly = 0x02,
+				PageReadWrite = 0x04,
+				PageWriteCopy = 0x08,
+				PageExecuteRead = 0x20,
+				PageExecuteReadWrite = 0x40,
+				SectionCommit = 0x8000000,
+				SectionImage = 0x1000000,
+				SectionNoCache = 0x10000000,
+				SectionReserve = 0x4000000,
 			}
 
-			private MemoryBlock _owner;
+			[DllImport("kernel32.dll", SetLastError = true)]
+			public static extern bool CloseHandle(IntPtr hObject);
 
-			private readonly bool _readable;
-			private readonly bool _writable;
+			[DllImport("kernel32.dll", SetLastError = true)]
+			public static extern bool UnmapViewOfFile(IntPtr lpBaseAddress);
 
-			private long _length;
-			private long _pos;
-			private readonly long _ptr;
+			[DllImport("kernel32.dll")]
+			public static extern IntPtr MapViewOfFileEx(IntPtr hFileMappingObject,
+			   FileMapAccessType dwDesiredAccess, uint dwFileOffsetHigh, uint dwFileOffsetLow,
+			   UIntPtr dwNumberOfBytesToMap, IntPtr lpBaseAddress);
 
-			public override bool CanRead => _readable;
-			public override bool CanSeek => true;
-			public override bool CanWrite => _writable;
-			public override void Flush() { }
-			public override long Length => _length;
-
-			public override long Position
+			[Flags]
+			public enum FileMapAccessType : uint
 			{
-				get { return _pos; }
-				set
-				{
-					if (value < 0 || value > _length) throw new ArgumentOutOfRangeException();
-					_pos = value;
-				}
+				Copy = 0x01,
+				Write = 0x02,
+				Read = 0x04,
+				AllAccess = 0x08,
+				Execute = 0x20,
 			}
 
-			public override int Read(byte[] buffer, int offset, int count)
-			{
-				if (!_readable) throw new InvalidOperationException();
-				if (count < 0 || count + offset > buffer.Length) throw new ArgumentOutOfRangeException();
-				EnsureNotDisposed();
-				count = (int)Math.Min(count, _length - _pos);
-				Marshal.Copy(Z.SS(_ptr + _pos), buffer, offset, count);
-				_pos += count;
-				return count;
-			}
-
-			public override long Seek(long offset, SeekOrigin origin)
-			{
-				long newpos;
-				switch (origin)
-				{
-					default:
-					case SeekOrigin.Begin:
-						newpos = offset;
-						break;
-					case SeekOrigin.Current:
-						newpos = _pos + offset;
-						break;
-					case SeekOrigin.End:
-						newpos = _length + offset;
-						break;
-				}
-				Position = newpos;
-				return newpos;
-			}
-
-			public override void SetLength(long value)
-			{
-				throw new InvalidOperationException();
-			}
-
-			public override void Write(byte[] buffer, int offset, int count)
-			{
-				if (!_writable) throw new InvalidOperationException();
-				if (count < 0 || count + offset > buffer.Length || count > _length - _pos)
-					throw new ArgumentOutOfRangeException();
-				EnsureNotDisposed();
-				Marshal.Copy(buffer, offset, Z.SS(_ptr + _pos), count);
-				_pos += count;
-			}
-		}
-
-		private class MemoryViewXorStream : MemoryViewStream
-		{
-			public MemoryViewXorStream(bool readable, bool writable, long ptr, long length, MemoryBlock owner,
-				byte[] initial, long offset)
-				: base(readable, writable, ptr, length, owner)
-			{
-				_initial = initial;
-				_offset = (int)offset;
-			}
-
-			/// <summary>
-			/// the initial data to XOR against for both reading and writing
-			/// </summary>
-			private readonly byte[] _initial;
-
-			/// <summary>
-			/// offset into the XOR data that this stream is representing
-			/// </summary>
-			private readonly int _offset;
-
-			public override int Read(byte[] buffer, int offset, int count)
-			{
-				int pos = (int)Position;
-				count = base.Read(buffer, offset, count);
-				XorTransform(_initial, _offset + pos, buffer, offset, count);
-				return count;
-			}
-
-			public override void Write(byte[] buffer, int offset, int count)
-			{
-				int pos = (int)Position;
-				if (count < 0 || count + offset > buffer.Length || count > Length - pos)
-					throw new ArgumentOutOfRangeException();
-				// is mutating the buffer passed to Stream.Write kosher?
-				XorTransform(_initial, _offset + pos, buffer, offset, count);
-				base.Write(buffer, offset, count);
-			}
-
-			private static unsafe void XorTransform(byte[] source, int sourceOffset, byte[] dest, int destOffset, int length)
-			{
-				// we don't do any bounds check because MemoryViewStream.Read and MemoryViewXorStream.Write already did it
-
-				// TODO: C compilers can make this pretty snappy, but can the C# jitter? Or do we need intrinsics
-				fixed (byte* _s = source, _d = dest)
-				{
-					byte* s = _s + sourceOffset;
-					byte* d = _d + destOffset;
-					byte* sEnd = s + length;
-					while (s < sEnd)
-					{
-						*d++ ^= *s++;
-					}
-				}
-			}
+			public static readonly IntPtr INVALID_HANDLE_VALUE = Z.US(0xffffffffffffffff);
 		}
 	}
 }

@@ -1,38 +1,40 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+
 using OpenTK.Input;
+
+using OpenTKGamePad = OpenTK.Input.GamePad;
 
 namespace BizHawk.Client.EmuHawk
 {
+	/// <summary>
+	/// Modified OpenTK Gamepad Handler<br/>
+	/// The jump from OpenTK 1.x to 3.x broke the original <see cref="Joystick">OpenTK.Input.Joystick</see> implementation, but we gain <see cref="OpenTKGamePad">OpenTK.Input.GamePad</see> support on Unix. However, the gamepad auto-mapping is a little suspect, so we use both methods.<br/>
+	/// As a side-effect, it should make it easier to implement virtual&rarr;host haptics in the future.
+	/// </summary>
 	public class OTK_GamePad
 	{
-		// Modified OpenTK Gamepad Handler
-		// OpenTK v3.x.x.x breaks the original OpenTK.Input.Joystick implementation, but enables OpenTK.Input.Gamepad 
-		// compatibility with OSX / linux. However, the gamepad auto-mapping is a little suspect, so we will have to use both methods
-		// This should also give us vibration support (if we ever implement it)
-
 		#region Static Members
 
-		private static readonly object _syncObj = new object();
-		private const int MAX_GAMEPADS = 4; //They don't have a way to query this for some reason. 4 is the minimum promised.
-		public static List<OTK_GamePad> Devices = new List<OTK_GamePad>();		
+		/// <remarks>They don't have a way to query this for some reason. 4 is the minimum promised.</remarks>
+		private const int MAX_GAMEPADS = 4;
 
-		/// <summary>
-		/// Initialization is only called once when MainForm loads
-		/// </summary>
+		private static readonly object _syncObj = new object();
+
+		private static readonly List<OTK_GamePad> Devices = new List<OTK_GamePad>();
+
+		/// <remarks>Initialization is only called once when MainForm loads</remarks>
 		public static void Initialize()
 		{
-			Devices.Clear();
-
-			int playerCount = 0;
-			for (int i = 0; i < MAX_GAMEPADS; i++)
+			CloseAll();
+			var playerCount = 0;
+			for (var i = 0; i < MAX_GAMEPADS; i++)
 			{
-				if (OpenTK.Input.GamePad.GetState(i).IsConnected || Joystick.GetState(i).IsConnected)
+				if (OpenTKGamePad.GetState(i).IsConnected || Joystick.GetState(i).IsConnected)
 				{
-					Console.WriteLine(string.Format("OTK GamePad/Joystick index: {0}", i));
-					OTK_GamePad ogp = new OTK_GamePad(i, ++playerCount);
-					Devices.Add(ogp);
+					Console.WriteLine($"OTK GamePad/Joystick index: {i}");
+					Devices.Add(new OTK_GamePad(i, ++playerCount));
 				}
 			}
 		}
@@ -41,10 +43,7 @@ namespace BizHawk.Client.EmuHawk
 		{
 			lock (_syncObj)
 			{
-				foreach (var device in Devices)
-				{
-					yield return device;
-				}
+				foreach (var device in Devices) yield return device;
 			}
 		}
 
@@ -52,222 +51,170 @@ namespace BizHawk.Client.EmuHawk
 		{
 			lock (_syncObj)
 			{
-				foreach (var device in Devices)
-				{
-					device.Update();
-				}
+				foreach (var device in Devices) device.Update();
 			}
 		}
 
 		public static void CloseAll()
 		{
-			if (Devices != null)
+			lock (_syncObj)
 			{
 				Devices.Clear();
 			}
+		}
+
+		/// <summary>The things that use <see cref="GetFloats"/> (analog controls) appear to require values -10000.0..10000.0 rather than the -1.0..1.0 that OpenTK returns (although even then the results may be slightly outside of these bounds)</summary>
+		private static float ConstrainFloatInput(float num)
+		{
+			if (num > 1) return 10000.0f;
+			if (num < -1) return -10000.0f;
+			return num * 10000.0f;
 		}
 
 		#endregion
 
 		#region Instance Members
 
-		/// <summary>
-		/// The GUID as detected by OpenTK.Input.Joystick
-		/// (or auto generated if this failed)
-		/// </summary>
-		readonly Guid _guid = Guid.NewGuid();
+		/// <summary>The GUID as detected by OpenTK.Input.Joystick (or if that failed, a random one generated on construction)</summary>
+		public readonly Guid Guid;
 
-		/// <summary>
-		/// Signs whether OpenTK returned a GUID for this device
-		/// </summary>
-		readonly bool _guidObtained;
+		/// <summary>Signals whether OpenTK returned a GUID for this device</summary>
+		private readonly bool _guidObtained;
 
-		/// <summary>
-		/// The OpenTK device index
-		/// </summary>
-		readonly int _deviceIndex;
+		/// <summary>The OpenTK device index</summary>
+		private readonly int _deviceIndex;
 
-		/// <summary>
-		/// The index to lookup into Devices
-		/// </summary>
-		readonly int _playerIndex;
+		/// <summary>The index to lookup into Devices</summary>
+		private readonly int _playerIndex;
 
-		/// <summary>
-		/// The name (if any) that OpenTK GamePad has resolved via its internal mapping database
-		/// </summary>
-		readonly string _name;
+		/// <summary>The name (if any) that OpenTK GamePad has resolved via its internal mapping database</summary>
+		private readonly string _name;
 
-		/// <summary>
-		/// The object as returned by OpenTK.Input.Gamepad.GetCapabilities();
-		/// </summary>
-		readonly GamePadCapabilities? _gamePadCapabilities;
+		/// <summary>The object returned by <see cref="OpenTKGamePad.GetCapabilities"/></summary>
+		private readonly GamePadCapabilities? _gamePadCapabilities;
 
-		/// <summary>
-		/// The object as returned by OpenTK.Input.Joystick.GetCapabilities();
-		/// </summary>
-		readonly JoystickCapabilities? _joystickCapabilities;
+		/// <summary>The object returned by <see cref="Joystick.GetCapabilities"/></summary>
+		private readonly JoystickCapabilities? _joystickCapabilities;
 
-		/// <summary>
-		/// Public check on whether mapped gamepad config is being used
-		/// </summary>
-		public bool MappedGamePad
-		{
-			get
-			{
-				if (_gamePadCapabilities.HasValue && _gamePadCapabilities.Value.IsMapped)
-					return true;
+		/// <summary>For use in keybind boxes</summary>
+		public readonly string InputNamePrefix;
 
-				return false;
-			}
-		}
+		/// <summary>Public check on whether mapped gamepad config is being used</summary>
+		public bool MappedGamePad => _gamePadCapabilities?.IsMapped == true;
 
-		/// <summary>
-		/// Gamepad Device state information - updated constantly
-		/// </summary>
-		GamePadState state = new GamePadState();
+		/// <summary>Gamepad Device state information - updated constantly</summary>
+		private GamePadState state;
 
-		/// <summary>
-		/// Joystick Device state information - updated constantly
-		/// </summary>
-		JoystickState jState = new JoystickState();
+		/// <summary>Joystick Device state information - updated constantly</summary>
+		private JoystickState jState;
 
-		OTK_GamePad(int index, int playerIndex)
+		private OTK_GamePad(int index, int playerIndex)
 		{
 			_deviceIndex = index;
 			_playerIndex = playerIndex;
 
-			var gameState = OpenTK.Input.GamePad.GetState(_deviceIndex);
-			var joyState = Joystick.GetState(_deviceIndex);
-
-			if (joyState.IsConnected)
+			if (Joystick.GetState(_deviceIndex).IsConnected)
 			{
-				_guid = Joystick.GetGuid(_deviceIndex);
+				Guid = Joystick.GetGuid(_deviceIndex);
 				_guidObtained = true;
 				_joystickCapabilities = Joystick.GetCapabilities(_deviceIndex);
 			}
 			else
 			{
-				_guid = Guid.NewGuid();
+				Guid = Guid.NewGuid();
+				_guidObtained = false;
 			}
 
-			if (gameState.IsConnected)
+			if (OpenTKGamePad.GetState(_deviceIndex).IsConnected)
 			{
-				_name = OpenTK.Input.GamePad.GetName(_deviceIndex);
-				_gamePadCapabilities = OpenTK.Input.GamePad.GetCapabilities(_deviceIndex);
+				_name = OpenTKGamePad.GetName(_deviceIndex);
+				_gamePadCapabilities = OpenTKGamePad.GetCapabilities(_deviceIndex);
 			}
 			else
 			{
 				_name = "OTK GamePad Undetermined Name";
 			}
-			
+
+			InputNamePrefix = $"{(MappedGamePad ? "X" : "J")}{_playerIndex} ";
+
 			Update();
 
-			Console.WriteLine("Initialising OpenTK GamePad: " + _guid);
-			Console.WriteLine("OpenTK Mapping: " + _name);
+			Console.WriteLine($"Initialising OpenTK GamePad: {Guid}");
+			Console.WriteLine($"OpenTK Mapping: {_name}");
 
-			InitializeMappings();			
+			InitializeMappings();
 		}
 
 		public void Update()
 		{
 			// update both here just in case
-			var tmpState = OpenTK.Input.GamePad.GetState(_deviceIndex);
-			if (!tmpState.Equals(state))
-			{
-				state = tmpState;
-				DebugGamepadState();
-			}
-			
+			var tmpState = OpenTKGamePad.GetState(_deviceIndex);
+			DebugState(tmpState);
+			state = tmpState;
 			var tmpJstate = Joystick.GetState(_deviceIndex);
-			if (!tmpJstate.Equals(jState))
-			{
-				jState = tmpJstate;
-				DebugJoystickState();
-			}			
+			DebugState(tmpJstate);
+			jState = tmpJstate;
 		}
 
-		private void DebugGamepadState()
+		[Conditional("DEBUG")]
+		private void DebugState(GamePadState tmpState)
 		{
-			Debug.WriteLine("GamePad State:\t" + state.ToString());
+			if (!tmpState.Equals(state)) Debug.WriteLine($"GamePad State:\t{tmpState}");
 		}
 
-		private void DebugJoystickState()
+		[Conditional("DEBUG")]
+		private void DebugState(JoystickState tmpJstate)
 		{
-			Debug.WriteLine("Joystick State:\t" + jState.ToString());
-		}
-
-		/// <summary>
-		/// The things that use GetFloats() (analog controls) appear to require values -10000 to 10000
-		/// rather than the -1.0 to 1.0 that OpenTK returns (although even then the results may be slightly outside of these bounds)
-		/// Note: is there a better/more perfomant way to do this?
-		/// </summary>
-		/// <param name="num"></param>
-		/// <returns></returns>
-		private float SetBounds(float num)
-		{
-			if (num > 1)
-				num = 1;
-			if (num < -1)
-				num = -1;
-
-			return num * 10000;
+			if (!tmpJstate.Equals(jState)) Debug.WriteLine($"Joystick State:\t{tmpJstate}");
 		}
 
 		public IEnumerable<Tuple<string, float>> GetFloats()
 		{
-			if (_gamePadCapabilities.HasValue && _gamePadCapabilities.Value.IsMapped)
+			if (MappedGamePad)
 			{
-				// automapping identified - use OpenTK.Input.GamePad class
-				yield return new Tuple<string, float>("LeftThumbX", SetBounds(state.ThumbSticks.Left.X));
-				yield return new Tuple<string, float>("LeftThumbY", SetBounds(state.ThumbSticks.Left.Y));
-				yield return new Tuple<string, float>("RightThumbX", SetBounds(state.ThumbSticks.Right.X));
-				yield return new Tuple<string, float>("RightThumbY", SetBounds(state.ThumbSticks.Right.Y));
-				yield return new Tuple<string, float>("LeftTrigger", SetBounds(state.Triggers.Left));
-				yield return new Tuple<string, float>("RightTrigger", SetBounds(state.Triggers.Right));
+				// automapping identified - use OpenTKGamePad
+				yield return new Tuple<string, float>("LeftThumbX", ConstrainFloatInput(state.ThumbSticks.Left.X));
+				yield return new Tuple<string, float>("LeftThumbY", ConstrainFloatInput(state.ThumbSticks.Left.Y));
+				yield return new Tuple<string, float>("RightThumbX", ConstrainFloatInput(state.ThumbSticks.Right.X));
+				yield return new Tuple<string, float>("RightThumbY", ConstrainFloatInput(state.ThumbSticks.Right.Y));
+				yield return new Tuple<string, float>("LeftTrigger", ConstrainFloatInput(state.Triggers.Left));
+				yield return new Tuple<string, float>("RightTrigger", ConstrainFloatInput(state.Triggers.Right));
 				yield break;
 			}
 			else
 			{
-				// use OpenTK.Input.Joystick class
-				yield return new Tuple<string, float>("X", SetBounds(jState.GetAxis(0)));
-				yield return new Tuple<string, float>("Y", SetBounds(jState.GetAxis(1)));
-				yield return new Tuple<string, float>("Z", SetBounds(jState.GetAxis(2)));
-				yield return new Tuple<string, float>("W", SetBounds(jState.GetAxis(3)));
-				yield return new Tuple<string, float>("V", SetBounds(jState.GetAxis(4)));
-				yield return new Tuple<string, float>("S", SetBounds(jState.GetAxis(5)));
-				yield return new Tuple<string, float>("Q", SetBounds(jState.GetAxis(6)));
-				yield return new Tuple<string, float>("P", SetBounds(jState.GetAxis(7)));
-				yield return new Tuple<string, float>("N", SetBounds(jState.GetAxis(8)));
+				// use Joystick
+				yield return new Tuple<string, float>("X", ConstrainFloatInput(jState.GetAxis(0)));
+				yield return new Tuple<string, float>("Y", ConstrainFloatInput(jState.GetAxis(1)));
+				yield return new Tuple<string, float>("Z", ConstrainFloatInput(jState.GetAxis(2)));
+				yield return new Tuple<string, float>("W", ConstrainFloatInput(jState.GetAxis(3)));
+				yield return new Tuple<string, float>("V", ConstrainFloatInput(jState.GetAxis(4)));
+				yield return new Tuple<string, float>("S", ConstrainFloatInput(jState.GetAxis(5)));
+				yield return new Tuple<string, float>("Q", ConstrainFloatInput(jState.GetAxis(6)));
+				yield return new Tuple<string, float>("P", ConstrainFloatInput(jState.GetAxis(7)));
+				yield return new Tuple<string, float>("N", ConstrainFloatInput(jState.GetAxis(8)));
 
-				for (int i = 9; i < 64; i++)
+				for (var i = 9; i < 64; i++)
 				{
-					int j = i;
-					yield return new Tuple<string, float>(string.Format("Axis{0}", j.ToString()), SetBounds(jState.GetAxis(j)));
+					var j = i;
+					yield return new Tuple<string, float>($"Axis{j.ToString()}", ConstrainFloatInput(jState.GetAxis(j)));
 				}
 
 				yield break;
 			}
 		}
 
-		public string Name { get { return "Joystick " + _playerIndex + string.Format(" ({0})", _name); } }
-		public string ID { get { return (_playerIndex).ToString(); } }
-		public Guid Guid { get { return _guid; } }
+		public string Name => $"Joystick {_playerIndex} ({_name})";
 
-		/// <summary>
-		/// Contains name and delegate function for all buttons, hats and axis
-		/// </summary>
-		public List<ButtonObject> buttonObjects = new List<ButtonObject>();
+		/// <summary>Contains name and delegate function for all buttons, hats and axis</summary>
+		public readonly List<ButtonObject> buttonObjects = new List<ButtonObject>();
 
-		void AddItem(string _name, Func<bool> pressed)
-		{
-			ButtonObject b = new ButtonObject
+		private void AddItem(string name, Func<bool> pressed) =>
+			buttonObjects.Add(new ButtonObject
 			{
-				ButtonName = _name,
+				ButtonName = name,
 				ButtonAction = pressed
-			};
-
-			buttonObjects.Add(b);
-		}
+			});
 
 		public struct ButtonObject
 		{
@@ -276,11 +223,10 @@ namespace BizHawk.Client.EmuHawk
 		}
 
 		/// <summary>
-		/// Setup mappings prior to button initialization
-		/// This is also here in case in the future we want users to be able to supply their own mappings for a device,
-		/// perhaps via an input form. Possibly wishful thinking/overly complex.
+		/// Setup mappings prior to button initialization.<br/>
+		/// This is also here in case in the future we want users to be able to supply their own mappings for a device, perhaps via an input form. Possibly wishful thinking/overly complex.
 		/// </summary>
-		void InitializeMappings()
+		private void InitializeMappings()
 		{
 			if (_guidObtained)
 			{
@@ -288,32 +234,31 @@ namespace BizHawk.Client.EmuHawk
 			}
 
 			// currently OpenTK has an internal database of mappings for the GamePad class: https://github.com/opentk/opentk/blob/master/src/OpenTK/Input/GamePadConfigurationDatabase.cs
-			// if an internal mapping is detected, use that. otherwise, use the joystick class to instantiate the controller
-			if (_gamePadCapabilities.HasValue && _gamePadCapabilities.Value.IsMapped)
+			if (MappedGamePad)
 			{
-				// internal map detected - use the GamePad class
-				InitializeGamePadControls();				
+				// internal map detected - use OpenTKGamePad
+				InitializeGamePadControls();
 			}
 			else
 			{
-				// no internal map detected - use the joystick class
+				// no internal map detected - use Joystick
 				InitializeJoystickControls();
 			}
 		}
 
-		void InitializeJoystickControls()
+		private void InitializeJoystickControls()
 		{
-			// OpenTK GamePad axis return float values (as opposed to the shorts of SlimDX)
+			// OpenTK's GetAxis returns float values (as opposed to the shorts of SlimDX)
 			const float ConversionFactor = 1.0f / short.MaxValue;
 			const float dzp = (short)4000 * ConversionFactor;
 			const float dzn = (short)-4000 * ConversionFactor;
 			//const float dzt = 0.6f;
 
-			// axis		
+			// axis
 			AddItem("X+", () => jState.GetAxis(0) >= dzp);
 			AddItem("X-", () => jState.GetAxis(0) <= dzn);
 			AddItem("Y+", () => jState.GetAxis(1) >= dzp);
-			AddItem("Y-", () => jState.GetAxis(1) <= dzn);			
+			AddItem("Y-", () => jState.GetAxis(1) <= dzn);
 			AddItem("Z+", () => jState.GetAxis(2) >= dzp);
 			AddItem("Z-", () => jState.GetAxis(2) <= dzn);
 			AddItem("W+", () => jState.GetAxis(3) >= dzp);
@@ -329,18 +274,18 @@ namespace BizHawk.Client.EmuHawk
 			AddItem("N+", () => jState.GetAxis(8) >= dzp);
 			AddItem("N-", () => jState.GetAxis(8) <= dzn);
 			// should be enough axis, but just in case:
-			for (int i = 9; i < 64; i++)
+			for (var i = 9; i < 64; i++)
 			{
-				int j = i;
-				AddItem(string.Format("Axis{0}+", j.ToString()), () => jState.GetAxis(j) >= dzp);
-				AddItem(string.Format("Axis{0}-", j.ToString()), () => jState.GetAxis(j) <= dzn);
+				var j = i;
+				AddItem($"Axis{j.ToString()}+", () => jState.GetAxis(j) >= dzp);
+				AddItem($"Axis{j.ToString()}-", () => jState.GetAxis(j) <= dzn);
 			}
 
 			// buttons
-			for (int i = 0; i < _joystickCapabilities.Value.ButtonCount; i++)
+			for (var i = 0; i < (_joystickCapabilities?.ButtonCount ?? 0); i++)
 			{
-				int j = i;
-				AddItem(string.Format("B{0}", i + 1), () => jState.GetButton(j) == ButtonState.Pressed);
+				var j = i;
+				AddItem($"B{i + 1}", () => jState.GetButton(j) == ButtonState.Pressed);
 			}
 
 			// hats
@@ -359,12 +304,12 @@ namespace BizHawk.Client.EmuHawk
 			AddItem("POV4U", () => jState.GetHat(JoystickHat.Hat3).IsUp);
 			AddItem("POV4D", () => jState.GetHat(JoystickHat.Hat3).IsDown);
 			AddItem("POV4L", () => jState.GetHat(JoystickHat.Hat3).IsLeft);
-			AddItem("POV4R", () => jState.GetHat(JoystickHat.Hat3).IsRight);			
+			AddItem("POV4R", () => jState.GetHat(JoystickHat.Hat3).IsRight);
 		}
 
-		void InitializeGamePadControls()
+		private void InitializeGamePadControls()
 		{
-			// OpenTK GamePad axis return float values (as opposed to the shorts of SlimDX)
+			// OpenTK's ThumbSticks contain float values (as opposed to the shorts of SlimDX)
 			const float ConversionFactor = 1.0f / short.MaxValue;
 			const float dzp = (short)4000 * ConversionFactor;
 			const float dzn = (short)-4000 * ConversionFactor;
@@ -410,18 +355,11 @@ namespace BizHawk.Client.EmuHawk
 		/// </summary>
 		/// <param name="left"></param>
 		/// <param name="right"></param>
-		public void SetVibration(float left, float right)
-		{
-			float _l = 0;
-			float _r = 0;
-
-			if (_gamePadCapabilities.Value.HasLeftVibrationMotor)
-				_l = left;
-			if (_gamePadCapabilities.Value.HasRightVibrationMotor)
-				_r = right;
-
-			OpenTK.Input.GamePad.SetVibration(_deviceIndex, left, right);
-		}		
+		public void SetVibration(float left, float right) => OpenTKGamePad.SetVibration(
+			_deviceIndex,
+			_gamePadCapabilities?.HasLeftVibrationMotor == true ? left : 0,
+			_gamePadCapabilities?.HasRightVibrationMotor == true ? right : 0
+		);
 
 		#endregion
 	}

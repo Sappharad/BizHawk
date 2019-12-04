@@ -1,11 +1,11 @@
 ﻿using System;
-using System.Linq;
 using System.Diagnostics;
 using System.IO;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+
 using Microsoft.VisualBasic.ApplicationServices;
 
 using BizHawk.Common;
@@ -13,7 +13,7 @@ using BizHawk.Client.Common;
 
 namespace BizHawk.Client.EmuHawk
 {
-	static class Program
+	internal static class Program
 	{
 		static Program()
 		{
@@ -21,52 +21,54 @@ namespace BizHawk.Client.EmuHawk
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
 
-			if (OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows)
+			if (EXE_PROJECT.OSTailoredCode.IsUnixHost)
 			{
-				var libLoader = OSTailoredCode.LinkedLibManager;
+				// for Unix, skip everything else and just wire up the event handler
+				AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
+			}
+			else
+			{
+				var libLoader = EXE_PROJECT.OSTailoredCode.LinkedLibManager;
 
 				//http://www.codeproject.com/Articles/310675/AppDomain-AssemblyResolve-Event-Tips
 
 				//try loading libraries we know we'll need
 				//something in the winforms, etc. code below will cause .net to popup a missing msvcr100.dll in case that one's missing
 				//but oddly it lets us proceed and we'll then catch it here
-				var d3dx9 = libLoader.LoadPlatformSpecific("d3dx9_43.dll");
-				var vc2015 = libLoader.LoadPlatformSpecific("vcruntime140.dll");
-				var vc2012 = libLoader.LoadPlatformSpecific("msvcr120.dll"); //TODO - check version?
-				var vc2010 = libLoader.LoadPlatformSpecific("msvcr100.dll"); //TODO - check version?
-				var vc2010p = libLoader.LoadPlatformSpecific("msvcp100.dll");
-				bool fail = false, warn = false;
-				warn |= d3dx9 == IntPtr.Zero;
-				fail |= vc2015 == IntPtr.Zero;
-				fail |= vc2010 == IntPtr.Zero;
-				fail |= vc2012 == IntPtr.Zero;
-				fail |= vc2010p == IntPtr.Zero;
-				if (fail || warn)
+				var d3dx9 = libLoader.LoadOrNull("d3dx9_43.dll");
+				var vc2015 = libLoader.LoadOrNull("vcruntime140.dll");
+				var vc2012 = libLoader.LoadOrNull("msvcr120.dll"); //TODO - check version?
+				var vc2010 = libLoader.LoadOrNull("msvcr100.dll"); //TODO - check version?
+				var vc2010p = libLoader.LoadOrNull("msvcp100.dll");
+				var reqPresent = vc2015.HasValue && vc2010.HasValue && vc2012.HasValue && vc2010p.HasValue;
+				var optPresent = d3dx9.HasValue;
+				if (!reqPresent || !optPresent)
 				{
-					var sw = new System.IO.StringWriter();
-					sw.WriteLine("[ OK ] .Net 4.6.1 (You couldn't even get here without it)");
-					sw.WriteLine("[{0}] Direct3d 9", d3dx9 == IntPtr.Zero ? "FAIL" : " OK ");
-					sw.WriteLine("[{0}] Visual C++ 2010 SP1 Runtime", (vc2010 == IntPtr.Zero || vc2010p == IntPtr.Zero) ? "FAIL" : " OK ");
-					sw.WriteLine("[{0}] Visual C++ 2012 Runtime", (vc2012 == IntPtr.Zero) ? "FAIL" : " OK ");
-					sw.WriteLine("[{0}] Visual C++ 2015 Runtime", (vc2015 == IntPtr.Zero) ? "FAIL" : " OK ");
-					var box = new BizHawk.Client.EmuHawk.CustomControls.PrereqsAlert(!fail);
-					box.textBox1.Text = sw.ToString();
+					var alertLines = new[]
+					{
+						"[ OK ] .NET CLR (You wouldn't even get here without it)",
+						$"[{(d3dx9.HasValue ? " OK " : "WARN")}] Direct3d 9",
+						$"[{(vc2010.HasValue && vc2010p.HasValue ? " OK " : "FAIL")}] Visual C++ 2010 SP1 Runtime",
+						$"[{(vc2012.HasValue ? " OK " : "FAIL")}] Visual C++ 2012 Runtime",
+						$"[{(vc2015.HasValue ? " OK " : "FAIL")}] Visual C++ 2015 Runtime"
+					};
+					using var box = new CustomControls.PrereqsAlert(reqPresent)
+					{
+						textBox1 = { Text = string.Join(Environment.NewLine, alertLines) }
+					};
 					box.ShowDialog();
-					if (fail) System.Diagnostics.Process.GetCurrentProcess().Kill();
+					if (!reqPresent) Process.GetCurrentProcess().Kill();
 				}
 
-				libLoader.FreePlatformSpecific(d3dx9);
-				libLoader.FreePlatformSpecific(vc2015);
-				libLoader.FreePlatformSpecific(vc2012);
-				libLoader.FreePlatformSpecific(vc2010);
-				libLoader.FreePlatformSpecific(vc2010p);
+				foreach (var p in new[] { d3dx9, vc2015, vc2012, vc2010, vc2010p })
+					if (p.HasValue) libLoader.FreeByPtr(p.Value);
 
 				// this will look in subdirectory "dll" to load pinvoked stuff
-				string dllDir = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "dll");
+				var dllDir = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "dll");
 				SetDllDirectory(dllDir);
 
 				//in case assembly resolution fails, such as if we moved them into the dll subdiretory, this event handler can reroute to them
-				AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
+				AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
 
 				//but before we even try doing that, whack the MOTW from everything in that directory (thats a dll)
 				//otherwise, some people will have crashes at boot-up due to .net security disliking MOTW.
@@ -75,38 +77,29 @@ namespace BizHawk.Client.EmuHawk
 
 				//We need to do it here too... otherwise people get exceptions when externaltools we distribute try to startup
 			}
-			else
-			{
-				// on mono we skip all the SetDllDirectory stuff
-				// just wire up the event handler
-				AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(CurrentDomain_AssemblyResolve);
-			}
 		}
 
 		[STAThread]
-		static int Main(string[] args)
+		private static int Main(string[] args)
 		{
-			int sm = SubMain(args);
-			// We have a problem on mono where the application (most of the time) does not terminate correctly
-			// and we have to CTRL-C to kill the mono process
-			// This forces mono to go away immediately
-			if (OSTailoredCode.CurrentOS != OSTailoredCode.DistinctOS.Windows)
+			var exitCode = SubMain(args);
+			if (EXE_PROJECT.OSTailoredCode.IsUnixHost)
 			{
-				Console.WriteLine("BizHawk has completed it's shutdown routines");
-				Console.WriteLine("Attempting to kill mono...");
+				Console.WriteLine("BizHawk has completed its shutdown routines, killing process...");
 				Process.GetCurrentProcess().Kill();
 			}
-			return sm;
+			return exitCode;
 		}
 
 		//NoInlining should keep this code from getting jammed into Main() which would create dependencies on types which havent been setup by the resolver yet... or something like that
 		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
-		static int SubMain(string[] args)
+		private static int SubMain(string[] args)
 		{
 			// this check has to be done VERY early.  i stepped through a debug build with wrong .dll versions purposely used,
 			// and there was a TypeLoadException before the first line of SubMain was reached (some static ColorType init?)
 			// zero 25-dec-2012 - only do for public builds. its annoying during development
-			if (!VersionInfo.DeveloperBuild)
+			// and don't bother when installed from a package manager i.e. not Windows --yoshi
+			if (!VersionInfo.DeveloperBuild && !EXE_PROJECT.OSTailoredCode.IsUnixHost)
 			{
 				var thisversion = typeof(Program).Assembly.GetName().Version;
 				var utilversion = Assembly.Load(new AssemblyName("Bizhawk.Client.Common")).GetName().Version;
@@ -119,37 +112,32 @@ namespace BizHawk.Client.EmuHawk
 				}
 			}
 
-			BizHawk.Common.TempFileManager.Start();			
-			
-			if (OSTailoredCode.CurrentOS != OSTailoredCode.DistinctOS.Windows)
-				HawkFile.ArchiveHandlerFactory = new SharpCompressArchiveHandler();
-			else
-				HawkFile.ArchiveHandlerFactory = new SevenZipSharpArchiveHandler();
+			TempFileManager.Start();
 
-			// Uncomment for system-agnostic glory!
-			//HawkFile.ArchiveHandlerFactory = new SharpCompressArchiveHandler();
+			HawkFile.ArchiveHandlerFactory = new SharpCompressArchiveHandler();
 
-			ArgParser argParser = new ArgParser();
-			argParser.ParseArguments(args);
-			if (argParser.cmdConfigFile != null) PathManager.SetDefaultIniPath(argParser.cmdConfigFile);
+			string cmdConfigFile = ArgParser.GetCmdConfigFile(args);
+			if (cmdConfigFile != null) PathManager.SetDefaultIniPath(cmdConfigFile);
 
 			try
 			{
 				Global.Config = ConfigService.Load<Config>(PathManager.DefaultIniPath);
-			} catch (Exception e) {
+			}
+			catch (Exception e)
+			{
 				new ExceptionBox(e).ShowDialog();
-				new ExceptionBox("Since your config file is corrupted, we're going to recreate it. Back it up before proceeding if you want to investigate further.").ShowDialog();
+				new ExceptionBox("Since your config file is corrupted or from a different BizHawk version, we're going to recreate it. Back it up before proceeding if you want to investigate further.").ShowDialog();
 				File.Delete(PathManager.DefaultIniPath);
 				Global.Config = ConfigService.Load<Config>(PathManager.DefaultIniPath);
 			}
 
 			Global.Config.ResolveDefaults();
 
-			BizHawk.Client.Common.StringLogUtil.DefaultToDisk = Global.Config.MoviesOnDisk;
-			BizHawk.Client.Common.StringLogUtil.DefaultToAWE = Global.Config.MoviesInAWE;
+			StringLogUtil.DefaultToDisk = Global.Config.MoviesOnDisk;
+			StringLogUtil.DefaultToAWE = Global.Config.MoviesInAWE;
 
 			// super hacky! this needs to be done first. still not worth the trouble to make this system fully proper
-			if (Array.Exists(args, arg => arg.ToLower().StartsWith("--gdi")))
+			if (Array.Exists(args, arg => arg.StartsWith("--gdi", StringComparison.InvariantCultureIgnoreCase)))
 			{
 				Global.Config.DispMethod = Config.EDispMethod.GdiPlus;
 			}
@@ -162,27 +150,10 @@ namespace BizHawk.Client.EmuHawk
 			GlobalWin.GLManager = GLManager.Instance;
 
 			//now create the "GL" context for the display method. we can reuse the IGL_TK context if opengl display method is chosen
-
 		REDO_DISPMETHOD:
 			if (Global.Config.DispMethod == Config.EDispMethod.GdiPlus)
 				GlobalWin.GL = new Bizware.BizwareGL.Drivers.GdiPlus.IGL_GdiPlus();
-			else if (Global.Config.DispMethod == Config.EDispMethod.Vulkan)
-			{
-				try
-				{
-					GlobalWin.GL = new Bizware.BizwareGL.Drivers.Vulkan.IGL_Vulkan();
-				}
-				catch (Exception ex)
-				{
-					new ExceptionBox(new Exception("Something in Vulkan init failed, using GDI+ as fallback", ex))
-						.ShowDialog();
-
-					// fallback
-					Global.Config.DispMethod = Config.EDispMethod.GdiPlus;
-					goto REDO_DISPMETHOD;
-				}
-			}
-			else if (Global.Config.DispMethod == Config.EDispMethod.SlimDX9 && OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows)
+			else if (Global.Config.DispMethod == Config.EDispMethod.SlimDX9)
 			{
 				try
 				{
@@ -190,8 +161,7 @@ namespace BizHawk.Client.EmuHawk
 				}
 				catch(Exception ex)
 				{
-					new ExceptionBox(new Exception("Initialization of Direct3d 9 Display Method failed; falling back to GDI+", ex))
-						.ShowDialog();
+					new ExceptionBox(new Exception("Initialization of Direct3d 9 Display Method failed; falling back to GDI+", ex)).ShowDialog();
 
 					// fallback
 					Global.Config.DispMethod = Config.EDispMethod.GdiPlus;
@@ -218,21 +188,22 @@ namespace BizHawk.Client.EmuHawk
 			}
 			catch(Exception ex)
 			{
-				new ExceptionBox(new Exception("Initialization of Display Method failed; falling back to GDI+", ex))
-					.ShowDialog();
+				new ExceptionBox(new Exception("Initialization of Display Method failed; falling back to GDI+", ex)).ShowDialog();
+
 				//fallback
 				Global.Config.DispMethod = Config.EDispMethod.GdiPlus;
 				goto REDO_DISPMETHOD;
 			}
 
-			if (OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows)
+			if (!EXE_PROJECT.OSTailoredCode.IsUnixHost)
 			{
 				//WHY do we have to do this? some intel graphics drivers (ig7icd64.dll 10.18.10.3304 on an unknown chip on win8.1) are calling SetDllDirectory() for the process, which ruins stuff.
 				//The relevant initialization happened just before in "create IGL context".
 				//It isn't clear whether we need the earlier SetDllDirectory(), but I think we do.
 				//note: this is pasted instead of being put in a static method due to this initialization code being sensitive to things like that, and not wanting to cause it to break
 				//pasting should be safe (not affecting the jit order of things)
-				SetDllDirectory(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "dll"));
+				var dllDir = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "dll");
+				SetDllDirectory(dllDir);
 			}
 
 			try
@@ -241,7 +212,7 @@ namespace BizHawk.Client.EmuHawk
 				{
 					try
 					{
-						new SingleInstanceController(args).RunWithArgs();
+						new SingleInstanceController(args).Run();
 					}
 					catch (ObjectDisposedException)
 					{
@@ -259,14 +230,14 @@ namespace BizHawk.Client.EmuHawk
 						{
 							GlobalWin.ExitCode = mf.ProgramRunLoop();
 						}
-						catch (Exception e) when (!Debugger.IsAttached && !VersionInfo.DeveloperBuild && Global.MovieSession.Movie.IsActive)
+						catch (Exception e) when (Global.MovieSession.Movie.IsActive && !(Debugger.IsAttached || VersionInfo.DeveloperBuild))
 						{
 							var result = MessageBox.Show(
 								"EmuHawk has thrown a fatal exception and is about to close.\nA movie has been detected. Would you like to try to save?\n(Note: Depending on what caused this error, this may or may not succeed)",
-								"Fatal error: " + e.GetType().Name,
+								$"Fatal error: {e.GetType().Name}",
 								MessageBoxButtons.YesNo,
 								MessageBoxIcon.Exclamation
-								);
+							);
 							if (result == DialogResult.Yes)
 							{
 								Global.MovieSession.Movie.Save();
@@ -281,11 +252,8 @@ namespace BizHawk.Client.EmuHawk
 			}
 			finally
 			{
-				if (GlobalWin.Sound != null)
-				{
-					GlobalWin.Sound.Dispose();
-					GlobalWin.Sound = null;
-				}
+				GlobalWin.Sound?.Dispose();
+				GlobalWin.Sound = null;
 				GlobalWin.GL.Dispose();
 				Input.Cleanup();
 			}
@@ -304,18 +272,19 @@ namespace BizHawk.Client.EmuHawk
 		} //SubMain
 
 		//declared here instead of a more usual place to avoid dependencies on the more usual place
+
 		[DllImport("kernel32.dll", SetLastError = true)]
-		static extern uint SetDllDirectory(string lpPathName);
+		private static extern uint SetDllDirectory(string lpPathName);
 
 		[DllImport("kernel32.dll", EntryPoint = "DeleteFileW", SetLastError = true, CharSet = CharSet.Unicode, ExactSpelling = true)]
-		static extern bool DeleteFileW([MarshalAs(UnmanagedType.LPWStr)]string lpFileName);
+		private static extern bool DeleteFileW([MarshalAs(UnmanagedType.LPWStr)]string lpFileName);
 
-		public static void RemoveMOTW(string path)
+		private static void RemoveMOTW(string path)
 		{
-			DeleteFileW(path + ":Zone.Identifier");
+			DeleteFileW($"{path}:Zone.Identifier");
 		}
 
-		static void WhackAllMOTW(string dllDir)
+		private static void WhackAllMOTW(string dllDir)
 		{
 			var todo = new Queue<DirectoryInfo>(new[] { new DirectoryInfo(dllDir) });
 			while (todo.Count > 0)
@@ -327,12 +296,11 @@ namespace BizHawk.Client.EmuHawk
 				foreach (var fi in di.GetFiles("*.exe"))
 					RemoveMOTW(fi.FullName);
 			}
-
 		}
 
-		static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
+		private static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
 		{
-			string requested = args.Name;
+			var requested = args.Name;
 
 			//mutate filename depending on selection of lua core. here's how it works
 			//1. we build NLua to the output/dll/lua directory. that brings KopiLua with it
@@ -347,20 +315,12 @@ namespace BizHawk.Client.EmuHawk
 				//this method referencing Global.Config makes assemblies get loaded, which isnt smart from the assembly resolver.
 				//so.. we're going to resort to something really bad.
 				//avert your eyes.
-				bool UseNLua = true;
-				string configPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "config.ini");
-				if (File.Exists(configPath) && (
-					File.ReadAllLines(configPath)
-						.FirstOrDefault(line => line.Contains("  \"UseNLua\": "))
-						?.Contains("false")
-						?? false))
+				var configPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "config.ini");
+				if (!EXE_PROJECT.OSTailoredCode.IsUnixHost // LuaInterface is not currently working on Mono
+					&& File.Exists(configPath)
+					&& (Array.Find(File.ReadAllLines(configPath), line => line.Contains("  \"UseNLua\": ")) ?? string.Empty)
+						.Contains("false"))
 				{
-					UseNLua = false;
-				}
-
-				if (!UseNLua && OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows)
-				{
-					// currently LuaInterface is not working/implemented on Mono so we always force NLua, otherwise:
 					requested = "LuaInterface";
 				}
 			}
@@ -371,21 +331,20 @@ namespace BizHawk.Client.EmuHawk
 				if (firstAsm != null) return firstAsm;
 
 				//load missing assemblies by trying to find them in the dll directory
-				string dllname = new AssemblyName(requested).Name + ".dll";
-				string directory = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "dll");
-				string simpleName = new AssemblyName(requested).Name;
+				var dllname = $"{new AssemblyName(requested).Name}.dll";
+				var directory = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "dll");
+				var simpleName = new AssemblyName(requested).Name;
 				if (simpleName == "NLua" || simpleName == "KopiLua") directory = Path.Combine(directory, "nlua");
-				string fname = Path.Combine(directory, dllname);
-				if (!File.Exists(fname)) return null;
-
-				//it is important that we use LoadFile here and not load from a byte array; otherwise mixed (managed/unamanged) assemblies can't load
-				return Assembly.LoadFile(fname);
+				var fname = Path.Combine(directory, dllname);
+				//it is important that we use LoadFile here and not load from a byte array; otherwise mixed (managed/unmanaged) assemblies can't load
+				return File.Exists(fname) ? Assembly.LoadFile(fname) : null;
 			}
 		}
 
-		/*public class SingleInstanceController : WindowsFormsApplicationBase
+		/*private class SingleInstanceController : WindowsFormsApplicationBase
 		{
-			readonly string[] cmdArgs;
+			private readonly string[] cmdArgs;
+
 			public SingleInstanceController(string[] args)
 			{
 				cmdArgs = args;
@@ -393,15 +352,12 @@ namespace BizHawk.Client.EmuHawk
 				StartupNextInstance += this_StartupNextInstance;
 			}
 
-			public void RunWithArgs()
-			{
-				Run(cmdArgs);
-			}
+			public void Run() => Run(cmdArgs);
 
-			void this_StartupNextInstance(object sender, StartupNextInstanceEventArgs e)
+			private void this_StartupNextInstance(object sender, StartupNextInstanceEventArgs e)
 			{
 				if (e.CommandLine.Count >= 1)
-					(MainForm as MainForm).LoadRom(e.CommandLine[0], new MainForm.LoadRomArgs() { OpenAdvanced = new OpenAdvanced_OpenRom() });
+					((MainForm)MainForm).LoadRom(e.CommandLine[0], new MainForm.LoadRomArgs { OpenAdvanced = new OpenAdvanced_OpenRom() });
 			}
 
 			protected override void OnCreateMainForm()
@@ -410,7 +366,7 @@ namespace BizHawk.Client.EmuHawk
 				var title = MainForm.Text;
 				MainForm.Show();
 				MainForm.Text = title;
-				GlobalWin.ExitCode = (MainForm as MainForm).ProgramRunLoop();
+				GlobalWin.ExitCode = ((MainForm)MainForm).ProgramRunLoop();
 			}
 		}*/
 	}

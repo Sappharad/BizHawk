@@ -1,5 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\DotNetBuild.Common.targets" Condition=" '$(OS)' != 'Windows_NT' " />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -32,6 +33,7 @@
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
     <TargetFrameworkProfile />
+    <LangVersion>8.0</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
     <DebugSymbols>true</DebugSymbols>
@@ -99,6 +101,8 @@
     <Compile Include="..\Version\VersionInfo.cs">
       <Link>VersionInfo.cs</Link>
     </Compile>
+    <Compile Include="Arcades\MAME\LibMAME.cs" />
+    <Compile Include="Arcades\MAME\MAME.cs" />
     <Compile Include="Calculator\TI83.IEmulator.cs">
       <DependentUpon>TI83.cs</DependentUpon>
     </Compile>
@@ -703,6 +707,36 @@
     </Compile>
     <Compile Include="Consoles\Intellivision\PSG.cs" />
     <Compile Include="Consoles\Intellivision\STIC.cs" />
+    <Compile Include="Consoles\Magnavox\Odyssey2\O2Hawk.cs" />
+    <Compile Include="Consoles\Magnavox\Odyssey2\O2Hawk.ICodeDataLog.cs" />
+    <Compile Include="Consoles\Magnavox\Odyssey2\O2Hawk.IDebuggable.cs">
+      <DependentUpon>O2Hawk.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Consoles\Magnavox\Odyssey2\O2Hawk.IEmulator.cs">
+      <DependentUpon>O2Hawk.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Consoles\Magnavox\Odyssey2\O2Hawk.IInputPollable.cs">
+      <DependentUpon>O2Hawk.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Consoles\Magnavox\Odyssey2\O2Hawk.IMemoryDomains.cs">
+      <DependentUpon>O2Hawk.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Consoles\Magnavox\Odyssey2\O2Hawk.ISaveRam.cs">
+      <DependentUpon>O2Hawk.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Consoles\Magnavox\Odyssey2\O2Hawk.ISettable.cs">
+      <DependentUpon>O2Hawk.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Consoles\Magnavox\Odyssey2\O2Hawk.IStatable.cs">
+      <DependentUpon>O2Hawk.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Consoles\Magnavox\Odyssey2\O2HawkControllerDeck.cs" />
+    <Compile Include="Consoles\Magnavox\Odyssey2\O2HawkControllers.cs" />
+    <Compile Include="Consoles\Magnavox\Odyssey2\Mappers\MapperBase.cs" />
+    <Compile Include="Consoles\Magnavox\Odyssey2\Mappers\Mapper_Default.cs" />
+    <Compile Include="Consoles\Magnavox\Odyssey2\MemoryMap.cs" />
+    <Compile Include="Consoles\Magnavox\Odyssey2\PPU.cs" />
+    <Compile Include="Consoles\Magnavox\Odyssey2\SerialPort.cs" />
     <Compile Include="Consoles\Magnavox\LibO2Em.cs" />
     <Compile Include="Consoles\Magnavox\O2Em.cs" />
     <Compile Include="Consoles\NEC\PCFX\LibTst.cs" />
@@ -836,6 +870,56 @@
       <DependentUpon>VBANext.cs</DependentUpon>
     </Compile>
     <Compile Include="Consoles\Nintendo\GBA\VBARegisterHelper.cs" />
+    <Compile Include="Consoles\Nintendo\GBHawkLink4x\GBHawkLink4x.cs" />
+    <Compile Include="Consoles\Nintendo\GBHawkLink4x\GBHawkLink4x.ICodeDataLog.cs" />
+    <Compile Include="Consoles\Nintendo\GBHawkLink4x\GBHawkLink4x.IDebuggable.cs">
+      <DependentUpon>GBHawkLink4x.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Consoles\Nintendo\GBHawkLink4x\GBHawkLink4x.IEmulator.cs">
+      <DependentUpon>GBHawkLink4x.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Consoles\Nintendo\GBHawkLink4x\GBHawkLink4x.IInputPollable.cs">
+      <DependentUpon>GBHawkLink4x.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Consoles\Nintendo\GBHawkLink4x\GBHawkLink4x.IMemoryDomains.cs">
+      <DependentUpon>GBHawkLink4x.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Consoles\Nintendo\GBHawkLink4x\GBHawkLink4x.ISaveRam.cs">
+      <DependentUpon>GBHawkLink4x.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Consoles\Nintendo\GBHawkLink4x\GBHawkLink4x.ISettable.cs">
+      <DependentUpon>GBHawkLink4x.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Consoles\Nintendo\GBHawkLink4x\GBHawkLink4x.IStatable.cs">
+      <DependentUpon>GBHawkLink4x.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Consoles\Nintendo\GBHawkLink4x\GBHawkLink4xControllerDeck.cs" />
+    <Compile Include="Consoles\Nintendo\GBHawkLink4x\GBHawkLink4xControllers.cs" />
+    <Compile Include="Consoles\Nintendo\GBHawkLink3x\GBHawkLink3x.cs" />
+    <Compile Include="Consoles\Nintendo\GBHawkLink3x\GBHawkLink3x.ICodeDataLog.cs" />
+    <Compile Include="Consoles\Nintendo\GBHawkLink3x\GBHawkLink3x.IDebuggable.cs">
+      <DependentUpon>GBHawkLink3x.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Consoles\Nintendo\GBHawkLink3x\GBHawkLink3x.IEmulator.cs">
+      <DependentUpon>GBHawkLink3x.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Consoles\Nintendo\GBHawkLink3x\GBHawkLink3x.IInputPollable.cs">
+      <DependentUpon>GBHawkLink3x.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Consoles\Nintendo\GBHawkLink3x\GBHawkLink3x.IMemoryDomains.cs">
+      <DependentUpon>GBHawkLink3x.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Consoles\Nintendo\GBHawkLink3x\GBHawkLink3x.ISaveRam.cs">
+      <DependentUpon>GBHawkLink3x.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Consoles\Nintendo\GBHawkLink3x\GBHawkLink3x.ISettable.cs">
+      <DependentUpon>GBHawkLink3x.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Consoles\Nintendo\GBHawkLink3x\GBHawkLink3x.IStatable.cs">
+      <DependentUpon>GBHawkLink3x.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Consoles\Nintendo\GBHawkLink3x\GBHawkLink3xControllerDeck.cs" />
+    <Compile Include="Consoles\Nintendo\GBHawkLink3x\GBHawkLink3xControllers.cs" />
     <Compile Include="Consoles\Nintendo\GBHawkLink\GBHawkLink.cs" />
     <Compile Include="Consoles\Nintendo\GBHawkLink\GBHawkLink.ICodeDataLog.cs" />
     <Compile Include="Consoles\Nintendo\GBHawkLink\GBHawkLink.IDebuggable.cs">
@@ -910,6 +994,9 @@
     <Compile Include="Consoles\Nintendo\GBHawk\MemoryMap.cs" />
     <Compile Include="Consoles\Nintendo\GBHawk\PPU.cs" />
     <Compile Include="Consoles\Nintendo\GBHawk\GBC_PPU.cs">
+      <DependentUpon>PPU.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Consoles\Nintendo\GBHawk\GBC_PPU_GB.cs">
       <DependentUpon>PPU.cs</DependentUpon>
     </Compile>
     <Compile Include="Consoles\Nintendo\GBHawk\GB_PPU.cs">
@@ -1548,6 +1635,13 @@
     <Compile Include="CPUs\MC6800\Operations.cs" />
     <Compile Include="CPUs\MC6800\OP_Tables.cs" />
     <Compile Include="CPUs\MC6800\Registers.cs" />
+    <Compile Include="CPUs\Intel8048\Disassembler.cs" />
+    <Compile Include="CPUs\Intel8048\Execute.cs" />
+    <Compile Include="CPUs\Intel8048\Interrupts.cs" />
+    <Compile Include="CPUs\Intel8048\I8048.cs" />
+    <Compile Include="CPUs\Intel8048\Operations.cs" />
+    <Compile Include="CPUs\Intel8048\OP_Tables.cs" />
+    <Compile Include="CPUs\Intel8048\Registers.cs" />
     <Compile Include="CPUs\MC6809\Execute.cs" />
     <Compile Include="CPUs\MC6809\Interrupts.cs" />
     <Compile Include="CPUs\MC6809\MC6809.cs" />

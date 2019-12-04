@@ -35,10 +35,9 @@ namespace BizHawk.Emulation.Cores.Consoles.Nintendo.QuickNES
 		[CoreConstructor("NES")]
 		public QuickNES(CoreComm comm, byte[] file, object settings, object syncSettings)
 		{
-			if (OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.Windows)
-				FP = new Win32_FPCtrl();
-			else
-				FP = new Unix_FPCtrl();
+			FP = OSTailoredCode.IsUnixHost
+				? (IFPCtrl) new Unix_FPCtrl()
+				: new Win32_FPCtrl();
 
 			using (FP.Save())
 			{

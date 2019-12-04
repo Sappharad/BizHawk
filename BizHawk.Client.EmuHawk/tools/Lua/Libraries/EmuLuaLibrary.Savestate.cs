@@ -18,8 +18,8 @@ namespace BizHawk.Client.EmuHawk
 		public override string Name => "savestate";
 
 		[LuaMethodExample("savestate.load( \"C:\\state.bin\" );")]
-		[LuaMethod("load", "Loads a savestate with the given path")]
-		public void Load(string path)
+		[LuaMethod("load", "Loads a savestate with the given path. If EmuHawk is deferring quicksaves, to TAStudio for example, that form will do what it likes (and the path is ignored).")]
+		public void Load(string path, bool suppressOSD = false)
 		{
 			if (!File.Exists(path))
 			{
@@ -27,34 +27,34 @@ namespace BizHawk.Client.EmuHawk
 			}
 			else
 			{
-				GlobalWin.MainForm.LoadState(path, Path.GetFileName(path), true);
+				GlobalWin.MainForm.LoadState(path, Path.GetFileName(path), true, suppressOSD);
 			}
 		}
 
 		[LuaMethodExample("savestate.loadslot( 7 );")]
-		[LuaMethod("loadslot", "Loads the savestate at the given slot number (must be an integer between 0 and 9)")]
-		public void LoadSlot(int slotNum)
+		[LuaMethod("loadslot", "Loads the savestate at the given slot number (must be an integer between 0 and 9). If EmuHawk is deferring quicksaves, to TAStudio for example, that form will do what it likes with the slot number.")]
+		public void LoadSlot(int slotNum, bool suppressOSD = false)
 		{
 			if (slotNum >= 0 && slotNum <= 9)
 			{
-				GlobalWin.MainForm.LoadQuickSave($"QuickSave{slotNum}", true);
+				GlobalWin.MainForm.LoadQuickSave($"QuickSave{slotNum}", true, suppressOSD);
 			}
 		}
 
 		[LuaMethodExample("savestate.save( \"C:\\state.bin\" );")]
-		[LuaMethod("save", "Saves a state at the given path")]
-		public void Save(string path)
+		[LuaMethod("save", "Saves a state at the given path. If EmuHawk is deferring quicksaves, to TAStudio for example, that form will do what it likes (and the path is ignored).")]
+		public void Save(string path, bool suppressOSD = false)
 		{
-			GlobalWin.MainForm.SaveState(path, path, true);
+			GlobalWin.MainForm.SaveState(path, path, true, suppressOSD);
 		}
 
 		[LuaMethodExample("savestate.saveslot( 7 );")]
-		[LuaMethod("saveslot", "Saves a state at the given save slot (must be an integer between 0 and 9)")]
-		public void SaveSlot(int slotNum)
+		[LuaMethod("saveslot", "Saves a state at the given save slot (must be an integer between 0 and 9). If EmuHawk is deferring quicksaves, to TAStudio for example, that form will do what it likes with the slot number.")]
+		public void SaveSlot(int slotNum, bool suppressOSD = false)
 		{
 			if (slotNum >= 0 && slotNum <= 9)
 			{
-				GlobalWin.MainForm.SaveQuickSave($"QuickSave{slotNum}");
+				GlobalWin.MainForm.SaveQuickSave($"QuickSave{slotNum}", true, suppressOSD);
 			}
 		}
 	}

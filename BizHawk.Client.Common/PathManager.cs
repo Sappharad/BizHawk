@@ -3,6 +3,7 @@ using System.Linq;
 using System.IO;
 using System.Reflection;
 
+using BizHawk.Common;
 using BizHawk.Common.StringExtensions;
 using BizHawk.Emulation.Common;
 using BizHawk.Emulation.Common.IEmulatorExtensions;
@@ -403,31 +404,25 @@ namespace BizHawk.Client.Common
 		/// </summary>
 		public static string TryMakeRelative(string absolutePath, string system = null)
 		{
-			var parentPath = string.IsNullOrWhiteSpace(system) ?
-				GetGlobalBasePathAbsolute() :
-				MakeAbsolutePath(GetPlatformBase(system), system);
+			var parentPath = string.IsNullOrWhiteSpace(system)
+				? GetGlobalBasePathAbsolute()
+				: MakeAbsolutePath(GetPlatformBase(system), system);
+#if true
+			if (!IsSubfolder(parentPath, absolutePath)) return absolutePath;
 
-			if (BizHawk.Common.OSTailoredCode.CurrentOS == BizHawk.Common.OSTailoredCode.DistinctOS.Windows)
+			return OSTailoredCode.IsUnixHost
+				? "./" + OSTailoredCode.SimpleSubshell("realpath", $"--relative-to=\"{parentPath}\" \"{absolutePath}\"", $"invalid path {absolutePath} or missing realpath binary")
+				: absolutePath.Replace(parentPath, ".");
+#else // written for Unix port but may be useful for .NET Core
+			if (!IsSubfolder(parentPath, absolutePath))
 			{
-				if (IsSubfolder(parentPath, absolutePath))
-				{
-					return absolutePath.Replace(parentPath, ".");
-				}
-			}
-			else
-			{
-				// weird kludges for linux systems
-				if (IsSubfolder(parentPath, absolutePath))
-				{
-					return absolutePath.Replace(parentPath.TrimEnd('.'), "./");
-				}
-				else if (parentPath.TrimEnd('.') == absolutePath + "/")
-				{
-					return ".";
-				}
+				return OSTailoredCode.IsUnixHost && parentPath.TrimEnd('.') == $"{absolutePath}/" ? "." : absolutePath;
 			}
 
-			return absolutePath;
+			return OSTailoredCode.IsUnixHost
+				? absolutePath.Replace(parentPath.TrimEnd('.'), "./")
+				: absolutePath.Replace(parentPath, ".");
+#endif
 		}
 
 		public static string MakeRelativeTo(string absolutePath, string basePath)
@@ -440,54 +435,36 @@ namespace BizHawk.Client.Common
 			return absolutePath;
 		}
 
-		// http://stackoverflow.com/questions/3525775/how-to-check-if-directory-1-is-a-subdirectory-of-dir2-and-vice-versa
-		private static bool IsSubfolder(string parentPath, string childPath)
+		/// <remarks>Algorithm for Windows taken from https://stackoverflow.com/a/7710620/7467292</remarks>
+		public static bool IsSubfolder(string parentPath, string childPath)
 		{
-			if (BizHawk.Common.OSTailoredCode.CurrentOS == BizHawk.Common.OSTailoredCode.DistinctOS.Windows)
+			if (OSTailoredCode.IsUnixHost)
 			{
-				var parentUri = new Uri(parentPath);
-
-				var childUri = new DirectoryInfo(childPath).Parent;
-
-				while (childUri != null)
-				{
-					if (new Uri(childUri.FullName) == parentUri)
-					{
-						return true;
-					}
-
-					childUri = childUri.Parent;
-				}
-
-				return false;
-			}
-			else
-			{
-				// more weird linux stuff
-				var parentUri = new Uri(parentPath.TrimEnd('.'));
-				var childUri = new DirectoryInfo(childPath).Parent;
-
+#if true
+				return OSTailoredCode.SimpleSubshell("realpath", $"-L \"{childPath}\"", $"invalid path {childPath} or missing realpath binary")
+					.StartsWith(OSTailoredCode.SimpleSubshell("realpath", $"-L \"{parentPath}\"", $"invalid path {parentPath} or missing realpath binary"));
+#else // written for Unix port but may be useful for Windows when moving to .NET Core
+				var parentUriPath = new Uri(parentPath.TrimEnd('.')).AbsolutePath.TrimEnd('/');
 				try
 				{
-					while (childUri != null)
+					for (var childUri = new DirectoryInfo(childPath).Parent; childUri != null; childUri = childUri?.Parent)
 					{
-						var ch = new Uri(childUri.FullName).AbsolutePath.TrimEnd('/');
-						var pr = parentUri.AbsolutePath.TrimEnd('/');
-						if (ch == pr)
-						{
-							return true;
-						}
-
-						childUri = childUri.Parent;
+						if (new Uri(childUri.FullName).AbsolutePath.TrimEnd('/') == parentUriPath) return true;
 					}
-
-					return false;
 				}
 				catch
 				{
-					return false;
+					// ignored
 				}
+				return false;
+#endif
 			}
+			var parentUri = new Uri(parentPath);
+			for (var childUri = new DirectoryInfo(childPath).Parent; childUri != null; childUri = childUri?.Parent)
+			{
+				if (new Uri(childUri.FullName) == parentUri) return true;
+			}
+			return false;
 		}
 
 		/// <summary>

@@ -49,7 +49,9 @@ namespace BizHawk.Client.EmuHawk
 		{
 			using (XAudio2 device = new XAudio2())
 			{
-				return Enumerable.Range(0, device.DeviceCount).Select(n => device.GetDeviceDetails(n).DisplayName).ToList();
+				return Enumerable.Range(0, device.DeviceCount)
+					.Select(n => device.GetDeviceDetails(n).DisplayName)
+					.ToList(); // enumerate before local var device is disposed
 			}
 		}
 
@@ -110,19 +112,15 @@ namespace BizHawk.Client.EmuHawk
 			return samplesNeeded;
 		}
 
-		public void WriteSamples(short[] samples, int sampleCount)
+		public void WriteSamples(short[] samples, int sampleOffset, int sampleCount)
 		{
 			if (sampleCount == 0) return;
 			_bufferPool.Release(_sourceVoice.State.BuffersQueued);
 			int byteCount = sampleCount * Sound.BlockAlign;
-			var buffer = _bufferPool.Obtain(byteCount);
-			if (byteCount > (samples.Length * 2)) { byteCount = samples.Length * 2; }
-			Buffer.BlockCopy(samples, 0, buffer.Bytes, 0, byteCount);
-			_sourceVoice.SubmitSourceBuffer(new AudioBuffer
-				{
-					AudioBytes = byteCount,
-					AudioData = buffer.DataStream
-				});
+			var item = _bufferPool.Obtain(byteCount);
+			Buffer.BlockCopy(samples, sampleOffset * Sound.BlockAlign, item.Bytes, 0, byteCount);
+			item.AudioBuffer.AudioBytes = byteCount;
+			_sourceVoice.SubmitSourceBuffer(item.AudioBuffer);
 			_runningSamplesQueued += sampleCount;
 		}
 
@@ -135,7 +133,8 @@ namespace BizHawk.Client.EmuHawk
 			{
 				foreach (BufferPoolItem item in _availableItems.Concat(_obtainedItems))
 				{
-					item.DataStream.Dispose();
+					item.AudioBuffer.AudioData.Dispose();
+					item.AudioBuffer.Dispose();
 				}
 				_availableItems.Clear();
 				_obtainedItems.Clear();
@@ -170,15 +169,18 @@ namespace BizHawk.Client.EmuHawk
 
 			public class BufferPoolItem
 			{
-				public int MaxLength { get; private set; }
-				public byte[] Bytes { get; private set; }
-				public DataStream DataStream { get; private set; }
+				public int MaxLength { get; }
+				public byte[] Bytes { get; }
+				public AudioBuffer AudioBuffer { get; }
 
 				public BufferPoolItem(int length)
 				{
 					MaxLength = length;
 					Bytes = new byte[MaxLength];
-					DataStream = new DataStream(Bytes, true, false);
+					AudioBuffer = new AudioBuffer
+					{
+						AudioData = new DataStream(Bytes, true, false)
+					};
 				}
 			}
 		}

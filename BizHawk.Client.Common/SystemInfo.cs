@@ -74,6 +74,16 @@ namespace BizHawk.Client.Common
 		public static SystemInfo Coleco { get; } = new SystemInfo("ColecoVision", CoreSystem.ColecoVision, 1);
 
 		/// <summary>
+		/// Gets the <see cref="SystemInfo"/> instance for Triple Gameboy
+		/// </summary>
+		public static SystemInfo GB3x { get; } = new SystemInfo("Game Boy Link 3x", CoreSystem.GB3x, 3, StandardButtons);
+
+		/// <summary>
+		/// Gets the <see cref="SystemInfo"/> instance for Quad Gameboy
+		/// </summary>
+		public static SystemInfo GB4x { get; } = new SystemInfo("Game Boy Link 4x", CoreSystem.GB4x, 4, StandardButtons);
+
+		/// <summary>
 		/// Gets the <see cref="SystemInfo"/> instance for Dual Gameboy
 		/// </summary>
 		public static SystemInfo DualGB { get; } = new SystemInfo("Game Boy Link", CoreSystem.DualGameBoy, 2, StandardButtons);
@@ -193,15 +203,15 @@ namespace BizHawk.Client.Common
 		/// </summary>
 		public static SystemInfo NeoGeoPocket { get; } = new SystemInfo("Neo-Geo Pocket", CoreSystem.NeoGeoPocket, 1);
 
-        /// <summary>
-        /// Gets the <see cref="SystemInfo"/> instance for ZXSpectrum
-        /// </summary>
-        public static SystemInfo ZXSpectrum { get; } = new SystemInfo("ZX Spectrum", CoreSystem.ZXSpectrum, 2);
+		/// <summary>
+		/// Gets the <see cref="SystemInfo"/> instance for ZXSpectrum
+		/// </summary>
+		public static SystemInfo ZXSpectrum { get; } = new SystemInfo("ZX Spectrum", CoreSystem.ZXSpectrum, 2);
 
-        /// <summary>
-        /// Gets the <see cref="SystemInfo"/> instance for AmstradCPC
-        /// </summary>
-        public static SystemInfo AmstradCPC { get; } = new SystemInfo("Amstrad CPC", CoreSystem.AmstradCPC, 2);
+		/// <summary>
+		/// Gets the <see cref="SystemInfo"/> instance for AmstradCPC
+		/// </summary>
+		public static SystemInfo AmstradCPC { get; } = new SystemInfo("Amstrad CPC", CoreSystem.AmstradCPC, 2);
 
 		/// <summary>
 		/// Gets the <see cref="SystemInfo"/> instance for GGL
@@ -211,7 +221,17 @@ namespace BizHawk.Client.Common
 		/// <summary>
 		/// Gets the <see cref="SystemInfo"/> instance for ChannelF
 		/// </summary>
+		/// 
 		public static SystemInfo ChannelF { get; } = new SystemInfo("Channel F", CoreSystem.ChannelF, 2);
+		/// <summary>
+		/// Gets the <see cref="SystemInfo"/> instance for Odyssey2
+		/// </summary>
+		/// 
+		public static SystemInfo O2 { get; } = new SystemInfo("Odyssey2", CoreSystem.Odyssey2, 2);
+		/// <summary>
+		/// Gets the <see cref="SystemInfo"/> instance for MAME
+		/// </summary>
+		public static SystemInfo MAME { get; } = new SystemInfo("MAME", CoreSystem.MAME, 4);
 
 		#endregion Get SystemInfo
 

@@ -166,7 +166,10 @@ namespace BizHawk.Client.EmuHawk
 
 			// TODO GL - a lot of disorganized wiring-up here
 			// installed separately on Unix (via package manager or from https://developer.nvidia.com/cg-toolkit-download), look in $PATH
-			CGC.CGCBinPath = OSTailoredCode.IsUnixHost ? "cgc" : Path.Combine(PathManager.GetDllDirectory(), "cgc.exe");
+			CGC.CGCBinPath = OSTailoredCode.IsUnixHost ?
+				OSTailoredCode.CurrentOS == OSTailoredCode.DistinctOS.macOS ?
+				Path.Combine(PathManager.GetDllDirectory(), "cgc_osx") :
+				"cgc" : Path.Combine(PathManager.GetDllDirectory(), "cgc.exe");
 			PresentationPanel = new PresentationPanel
 			{
 				GraphicsControl = { MainWindow = true }

@@ -27,6 +27,8 @@ namespace BizHawk.Client.EmuHawk
 
 		private static readonly List<KeyInput.KeyEvent> _eventList = new List<KeyInput.KeyEvent>();
 		private static KeyboardState _kbState;
+		public static HashSet<Key> InjectedKeys = new HashSet<Key>();
+		private static HashSet<Key> _previousInjection = new HashSet<Key>();
 
 		public static void Initialize ()
 		{
@@ -42,9 +44,11 @@ namespace BizHawk.Client.EmuHawk
 				_kbState = Keyboard.GetState();
 				foreach (KeyValuePair<Key, SlimDX.DirectInput.Key> entry in KeyEnumMap)
 				{
-					if (lastState.IsKeyUp(entry.Key) && _kbState.IsKeyDown(entry.Key))
+					if ((lastState.IsKeyUp(entry.Key) && _kbState.IsKeyDown(entry.Key)) ||
+						(!_previousInjection.Contains(entry.Key) && InjectedKeys.Contains(entry.Key)))
 						_eventList.Add(new KeyInput.KeyEvent { Key = entry.Value, Pressed = true });
-					else if (lastState.IsKeyDown(entry.Key) && _kbState.IsKeyUp(entry.Key))
+					else if ((lastState.IsKeyDown(entry.Key) && _kbState.IsKeyUp(entry.Key)) ||
+						(_previousInjection.Contains(entry.Key) && !InjectedKeys.Contains(entry.Key)))
 						_eventList.Add(new KeyInput.KeyEvent { Key = entry.Value, Pressed = false });
 				}
 			}
@@ -59,12 +63,13 @@ namespace BizHawk.Client.EmuHawk
 					System.Console.WriteLine("OpenTK Keyboard thread is angry.");
 				}
 			}
+			_previousInjection = new HashSet<Key>(InjectedKeys);
 			return _eventList;
 		}
 
 		public static bool IsPressed (Key key)
 		{
-			return _kbState.IsKeyDown(key);
+			return _kbState.IsKeyDown(key) || InjectedKeys.Contains(key);
 		}
 
 		public static bool ShiftModifier {

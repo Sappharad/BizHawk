@@ -91,6 +91,9 @@
     <Reference Include="KopiLua">
       <HintPath>..\output\dll\nlua\KopiLua.dll</HintPath>
     </Reference>
+    <Reference Include="OpenTK3">
+      <HintPath>..\References\OpenTK3.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <ImageAsset Include="Assets.xcassets\AppIcon.appiconset\Contents.json" />
